@@ -1,8 +1,8 @@
 # TP 2025 Team 12 - Frontend
 
 ## How to run
-1. `git clone <this repo>`
-2. `cd <dir>`
+1. `git git@github.com:rykktiadloans/TP_team12_frontend.git`
+2. `cd TP_team12_frontend`
 3. `npm i`
 4. `npm run dev`
 
