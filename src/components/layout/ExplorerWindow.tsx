@@ -174,7 +174,7 @@ export function ExplorerWindow() {
     <div className="h-full w-full flex flex-col">
       <Tabs defaultValue="tree" className="h-full w-full flex flex-col">
         <div className="px-3 pt-3">
-          <TabsList className="w-full justify-start">
+          <TabsList className="w-full justify-start overflow-auto">
             <TabsTrigger value="tree">Definition</TabsTrigger>
             <TabsTrigger value="search">Analysis</TabsTrigger>
             <TabsTrigger value="favorites">Resolution</TabsTrigger>
