@@ -15,3 +15,4 @@
 - [Shadcn/ui](https://ui.shadcn.com/)
 - [Tailwind](https://tailwindcss.com/)
 - [Lucide](https://lucide.dev/)
+- [React Flow](https://reactflow.dev/)
