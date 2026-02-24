@@ -38,7 +38,7 @@ export function ConsoleWindow() {
     <div className="h-full w-full flex flex-col">
       <div className="px-3 py-2 border-b text-sm font-medium">Console</div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-3">
           <pre className="text-xs leading-5 whitespace-pre-wrap">
             {logs.map((l) => (
