@@ -1,14 +1,14 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { MainCardView } from '../cards/MainCardView'
+import type { CardNodeStatus } from '../cards/cardTypes'
 
-type Status = 'ok' | 'warn' | 'err'
 
 export type Node = {
   id: string
   title: string
   desc?: string
-  status?: Status
+  status?: CardNodeStatus
   // "kinda grid but not really" positions (px) in a big canvas
   x: number
   y: number
@@ -118,11 +118,6 @@ export function MainCardsWindow() {
       </div>
 
       <MainCardView nodes={NODES} edges={EDGES}/>
-      <div className="mt-3 text-xs text-muted-foreground">
-        Prototype notes: node positions are hardcoded in <code>NODES</code> and
-        connections in <code>EDGES</code>. Next step is making nodes draggable +
-        auto-layout if you want.
-      </div>
     </div>
   )
 }

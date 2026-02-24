@@ -3,49 +3,60 @@ import {
   ReactFlow,
   applyNodeChanges,
   applyEdgeChanges,
-  type Node as FlowNode,
   type Edge as FlowEdge,
   type NodeChange,
   type EdgeChange,
+  Background,
+  BackgroundVariant,
+  Controls,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
+import type { CardNodeType } from './cardTypes'
+import { CardNode } from './CardNode'
 
 interface MainCardViewProps {
   nodes: Node[]
   edges: Edge[]
 }
 
-function castNodes(nodes: Node[]): FlowNode[] {
+function castNodes(nodes: Node[]): CardNodeType[] {
   return nodes.map(
-    (node): FlowNode => ({
+    (node): CardNodeType => ({
       id: node.id,
+      type: 'cardNode',
       position: {
-        x: node.x,
-        y: node.y,
+        x: node.x - (node.w ?? 280) / 2,
+        y: node.y - 75,
       },
+      width: node.w ?? 280,
+      height: 150,
       data: {
-        label: node.title,
+        title: node.title,
+        description: node.desc,
+        status: node.status,
       },
     })
   )
 }
 
 function castEdges(edges: Edge[]): FlowEdge[] {
-    return edges.map((edge): FlowEdge => ({
-        id: edge.id,
-        source: edge.from,
-        target: edge.to,
-        label: edge.label
-    }))
+  return edges.map(
+    (edge): FlowEdge => ({
+      id: edge.id,
+      source: edge.from,
+      target: edge.to,
+      label: edge.label,
+    })
+  )
 }
 
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
-    const [flowNodes, setFlowNodes] = useState(castNodes(nodes))
-    const [flowEdges, setFlowEdges] = useState(castEdges(edges))
+  const [flowNodes, setFlowNodes] = useState(castNodes(nodes))
+  const [flowEdges, setFlowEdges] = useState(castEdges(edges))
 
   const onNodesChange = useCallback(
-    (changes: NodeChange<FlowNode>[]) =>
+    (changes: NodeChange<CardNodeType>[]) =>
       setFlowNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
     []
   )
@@ -55,15 +66,26 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
     []
   )
 
+  const nodeTypes = useCallback(() => ({cardNode: CardNode}), [])
+
   return (
     <div className="h-full w-full">
       <ReactFlow
+        nodeTypes={nodeTypes()}
         nodes={flowNodes}
         edges={flowEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         fitView
-      />
+      >
+        <Controls />
+        <Background
+          variant={BackgroundVariant.Dots}
+          color="#808080"
+          gap={20}
+          size={1}
+        />
+      </ReactFlow>
     </div>
   )
 }
