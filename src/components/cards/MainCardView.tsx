@@ -1,19 +1,22 @@
 import { useState, useCallback } from 'react'
 import {
   ReactFlow,
-  applyNodeChanges,
-  applyEdgeChanges,
   type Edge as FlowEdge,
-  type NodeChange,
-  type EdgeChange,
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  type OnConnect,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
 import type { CardNodeType } from './cardTypes'
 import { CardNode } from './CardNode'
+import { FloatingEdge } from './FloatingEdge'
+import CustomConnectionLine from './CustomConnectionLine'
 
 interface MainCardViewProps {
   nodes: Node[]
@@ -25,16 +28,16 @@ function castNodes(nodes: Node[]): CardNodeType[] {
     (node): CardNodeType => ({
       id: node.id,
       type: 'cardNode',
+      width: 300,
       position: {
-        x: node.x - (node.w ?? 280) / 2,
-        y: node.y - 75,
+        x: 0,
+        y: 0,
       },
-      width: node.w ?? 280,
-      height: 150,
+      dragHandle: '.move-handle',
       data: {
         title: node.title,
         description: node.desc,
-        status: node.status,
+        modelType: node.type,
       },
     })
   )
@@ -46,36 +49,47 @@ function castEdges(edges: Edge[]): FlowEdge[] {
       id: edge.id,
       source: edge.from,
       target: edge.to,
-      label: edge.label,
     })
   )
 }
 
+const defaultEdgeOptions = {
+  type: 'floating',
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    color: '#b1b1b7',
+  },
+}
+
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
-  const [flowNodes, setFlowNodes] = useState(castNodes(nodes))
-  const [flowEdges, setFlowEdges] = useState(castEdges(edges))
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange<CardNodeType>[]) =>
-      setFlowNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
-    []
+  const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState(
+    castNodes(nodes)
   )
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange<FlowEdge>[]) =>
-      setFlowEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
-    []
+  const [flowEdges, setFlowEdges, onFlowEdgesChange] = useEdgesState(
+    castEdges(edges)
   )
 
-  const nodeTypes = useCallback(() => ({cardNode: CardNode}), [])
+  const onConnect = useCallback<OnConnect>(
+    (params) => setFlowEdges((eds) => addEdge(params, eds)),
+    [setFlowEdges]
+  )
+
+  const nodeTypes = useCallback(() => ({ cardNode: CardNode }), [])
+
+  const edgeTypes = useCallback(() => ({ floating: FloatingEdge }), [])
 
   return (
     <div className="h-full w-full">
       <ReactFlow
         nodeTypes={nodeTypes()}
+        edgeTypes={edgeTypes()}
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={onFlowNodesChange}
+        onEdgesChange={onFlowEdgesChange}
+        onConnect={onConnect}
+        defaultEdgeOptions={defaultEdgeOptions}
+        connectionLineComponent={CustomConnectionLine}
         fitView
       >
         <Controls />
