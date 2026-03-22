@@ -1,7 +1,11 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { MainCardView } from '../cards/MainCardView'
-import { useModelStore, type ModelState } from '@/store/model-store'
+import {
+  keyToModelType,
+  useModelStore,
+  type ModelState,
+} from '@/store/model-store'
 import type { Model, ModelType } from '@/types/models'
 
 export type Node = {
@@ -31,7 +35,11 @@ export function MainCardsWindow() {
           <Button size="sm" variant="outline" type="button">
             Refresh
           </Button>
-          <Button size="sm" type="button">
+          <Button
+            size="sm"
+            type="button"
+            onClick={() => console.log(state)}
+          >
             New
           </Button>
         </div>
@@ -67,7 +75,7 @@ function stateToNodes(state: ModelState): Node[] {
           id: modelToId(key, model),
           title: name,
           desc: desc,
-          type: key
+          type: key,
         } as Node
 
         if (desc == null) {
@@ -215,23 +223,21 @@ function stateToEdges(state: ModelState): Edge[] {
   )
 
   const all = [
-    ...new Set([
-      ...componentComponent,
-      ...componentTechnology,
-      ...dataEntityComponent,
-      ...dataEntityTechnology,
-      ...controlComponent,
-      ...attackStepComponent,
-      ...attackStepControls,
-      ...attackStepSelf,
-      ...attackStepThreatClass,
-      ...threatScenarioAttackStep,
-      ...threatScenarioThreatClass,
-      ...damageScenarioComponent,
-      ...damageScenarioThreatScenario,
-      ...compromiseComponent,
-      ...compromiseThreatScenario,
-    ]),
+    ...componentComponent,
+    ...componentTechnology,
+    ...dataEntityComponent,
+    ...dataEntityTechnology,
+    ...controlComponent,
+    ...attackStepComponent,
+    ...attackStepControls,
+    ...attackStepSelf,
+    ...attackStepThreatClass,
+    ...threatScenarioAttackStep,
+    ...threatScenarioThreatClass,
+    ...damageScenarioComponent,
+    ...damageScenarioThreatScenario,
+    ...compromiseComponent,
+    ...compromiseThreatScenario,
   ]
 
   return all.map((id): Edge => {
@@ -242,22 +248,6 @@ function stateToEdges(state: ModelState): Edge[] {
       to: split[1],
     }
   })
-}
-
-function keyToModelType(type: keyof ModelState): ModelType {
-  const table = {
-    nodes: 'node',
-    technologies: 'technology',
-    components: 'component',
-    dataEntities: 'dataEntity',
-    controls: 'control',
-    threatClasses: 'threatClass',
-    attackSteps: 'attackStep',
-    threatScenarios: 'threatScenario',
-    damageScenarios: 'damageScenario',
-    compromises: 'compromise',
-  } as Record<keyof ModelState, ModelType>
-  return table[type]
 }
 
 function modelToId(type: ModelType, model: Model) {
@@ -279,7 +269,7 @@ function toOne<T extends Model, U extends Model>(
       if (t == undefined) {
         return null
       }
-      return [thisKey, modelToId(targetModelType, t)].sort().join('-')
+      return [thisKey, modelToId(targetModelType, t)].join('-')
     })
     .filter((el) => el != null)
 }
@@ -296,7 +286,7 @@ function toMany<T extends Model, U extends Model>(
     const ids = cur[key] as number[]
     const others = target.filter((c) => ids.includes(c.id))
     return others.map((other) =>
-      [thisKey, modelToId(targetModelType, other)].sort().join('-')
+      [thisKey, modelToId(targetModelType, other)].join('-')
     )
   })
 }

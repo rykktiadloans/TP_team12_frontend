@@ -22,6 +22,7 @@ export interface NodeModel extends Model{
 export interface TechnologyModel extends Model{
   name: string
   description: string
+  project: number | null
 }
 
 export interface ComponentModel extends Model{
@@ -29,6 +30,7 @@ export interface ComponentModel extends Model{
   description: string
   communicates_with: number[]
   technology: number[]
+  project: number | null
 }
 
 export interface DataEntityModel extends Model{
@@ -36,6 +38,7 @@ export interface DataEntityModel extends Model{
   description: string
   component: number | null
   technology: number[]
+  project: number | null
 }
 
 export interface ControlModel extends Model {
@@ -46,11 +49,13 @@ export interface ControlModel extends Model {
   fr_WoO: string
   fr_eq: string
   component: number | null
+  project: number | null
 }
 
 export interface ThreatClassModel extends Model{
   name: string
   description: string
+  project: number | null
 }
 
 export interface AttackStepModel extends Model{
@@ -64,12 +69,14 @@ export interface AttackStepModel extends Model{
   control: number[]
   prepared_by: number[]
   threat_class: number | null
+  project: number | null
 }
 
 export interface ThreatScenarioModel extends Model{
   name: string
   attackStep: number | null
   threat_class: number | null
+  project: number | null
 }
 
 export interface DamageScenarioModel extends Model{
@@ -82,10 +89,12 @@ export interface DamageScenarioModel extends Model{
   privacy_impact: string
   component: number | null
   threat_scenario: number | null
+  project: number | null
 }
 
 export interface CompromisesModel extends Model{
   affected_CIA_parts: string
   component: number | null
   threat_scenario: number | null
+  project: number | null
 }

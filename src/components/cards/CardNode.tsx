@@ -14,8 +14,10 @@ import { Button } from '../ui/button'
 import '../../css/card.css'
 
 export function CardNode({ data, selected, id }: NodeProps<CardNodeType>) {
-  const connection = useConnection()
-  const isTarget = connection.inProgress && connection.fromNode.id !== id
+  const connection = useConnection<CardNodeType>()
+
+  const isTarget =
+    connection.inProgress && connection.fromNode.id !== id
 
   const placeholderPercentrage = Math.min(100, data.title.length * 2)
 

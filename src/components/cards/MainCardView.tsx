@@ -17,6 +17,8 @@ import type { CardNodeType } from './cardTypes'
 import { CardNode } from './CardNode'
 import { FloatingEdge } from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
+import { useModelStore } from '@/store/model-store'
+import type { ModelType } from '@/types/models'
 
 interface MainCardViewProps {
   nodes: Node[]
@@ -61,7 +63,13 @@ const defaultEdgeOptions = {
   },
 }
 
+const connectionLineStyle = {
+  stroke: '#b1b1b7',
+}
+
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
+  const isConnectable = useModelStore(store => store.isConnectable)
+  const addConnection = useModelStore(store => store.addConnection)
   const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState(
     castNodes(nodes)
   )
@@ -70,8 +78,15 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   )
 
   const onConnect = useCallback<OnConnect>(
-    (params) => setFlowEdges((eds) => addEdge(params, eds)),
-    [setFlowEdges]
+    (params) => {
+      const [fromId, fromType] = params.source.split('.')
+      const [toId, toType] = params.target.split('.')
+      if (isConnectable(+fromId, fromType as ModelType, +toId, toType as ModelType)) {
+        setFlowEdges((eds) => addEdge(params, eds))
+        addConnection(+fromId, fromType as ModelType, +toId, toType as ModelType)
+      }
+    },
+    [addConnection, isConnectable, setFlowEdges]
   )
 
   const nodeTypes = useCallback(() => ({ cardNode: CardNode }), [])
@@ -90,6 +105,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
         onConnect={onConnect}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineComponent={CustomConnectionLine}
+        connectionLineStyle={connectionLineStyle}
         fitView
       >
         <Controls />
