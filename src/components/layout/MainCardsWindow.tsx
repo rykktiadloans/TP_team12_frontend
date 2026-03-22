@@ -1,107 +1,31 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { MainCardView } from '../cards/MainCardView'
-import type { CardNodeStatus } from '../cards/cardTypes'
-
+import {
+  keyToModelType,
+  useModelStore,
+  type ModelState,
+} from '@/store/model-store'
+import type { Model, ModelType } from '@/types/models'
 
 export type Node = {
   id: string
   title: string
   desc?: string
-  status?: CardNodeStatus
+  type: ModelType
   // "kinda grid but not really" positions (px) in a big canvas
-  x: number
-  y: number
-  w?: number
 }
 
 export type Edge = {
   id: string
   from: string
   to: string
-  label?: string
 }
 
-const NODES: Node[] = [
-  {
-    id: 'ecu',
-    title: 'ECU',
-    desc: 'Engine control unit',
-    status: 'ok',
-    x: 120,
-    y: 120,
-    w: 280,
-  },
-  {
-    id: 'clm',
-    title: 'Central Locking Module',
-    desc: 'Body control',
-    status: 'warn',
-    x: 520,
-    y: 220,
-    w: 320,
-  },
-  {
-    id: 'door',
-    title: 'Door',
-    desc: 'Actuator + sensor',
-    status: 'ok',
-    x: 930,
-    y: 320,
-    w: 240,
-  },
-
-  {
-    id: 'airbag',
-    title: 'Airbag Control Module',
-    desc: 'SRS controller',
-    status: 'err',
-    x: 260,
-    y: 420,
-    w: 320,
-  },
-  {
-    id: 'dash',
-    title: 'Instrument Cluster',
-    desc: 'CAN display',
-    status: 'ok',
-    x: 720,
-    y: 520,
-    w: 300,
-  },
-
-  // a couple extra placeholders to show “not-perfect grid”
-  {
-    id: 'gateway',
-    title: 'CAN Gateway',
-    desc: 'Routing',
-    status: 'ok',
-    x: 420,
-    y: 640,
-    w: 260,
-  },
-  {
-    id: 'abs',
-    title: 'ABS Module',
-    desc: 'Braking',
-    status: 'warn',
-    x: 1040,
-    y: 560,
-    w: 260,
-  },
-]
-
-const EDGES: Edge[] = [
-  { id: 'e1', from: 'ecu', to: 'clm', label: 'CAN High / Low' },
-  { id: 'e2', from: 'clm', to: 'door', label: 'Lock command' },
-  { id: 'e3', from: 'ecu', to: 'airbag', label: 'Crash status' },
-  { id: 'e4', from: 'clm', to: 'dash', label: 'Vehicle state' },
-  { id: 'e5', from: 'ecu', to: 'gateway', label: 'Powertrain CAN' },
-  { id: 'e6', from: 'gateway', to: 'abs', label: 'Chassis CAN' },
-  { id: 'e7', from: 'gateway', to: 'dash', label: 'Diag / status' },
-]
-
 export function MainCardsWindow() {
+  const state = useModelStore((state) => state.state)
+  const nodes = React.useMemo(() => stateToNodes(state), [state])
+  const edges = React.useMemo(() => stateToEdges(state), [state])
   return (
     <div className="h-full w-full flex flex-col">
       <div className="px-4 py-3 border-b flex items-center gap-2">
@@ -111,13 +35,258 @@ export function MainCardsWindow() {
           <Button size="sm" variant="outline" type="button">
             Refresh
           </Button>
-          <Button size="sm" type="button">
+          <Button
+            size="sm"
+            type="button"
+            onClick={() => console.log(state)}
+          >
             New
           </Button>
         </div>
       </div>
 
-      <MainCardView nodes={NODES} edges={EDGES}/>
+      <MainCardView nodes={nodes} edges={edges} />
     </div>
   )
+}
+
+function stateToNodes(state: ModelState): Node[] {
+  const nodes = Object.entries(state).flatMap(
+    ([name, map]: [string, Map<number, Model>]) => {
+      const key = keyToModelType(name as keyof ModelState)
+      const models = [...map.values()].map((model): Node => {
+        let name = 'Compromise ' + model.id
+        if ('title' in model) {
+          name = String(model.title)
+        }
+        if ('name' in model) {
+          name = String(model.name)
+        }
+
+        let desc = null
+        if ('description' in model) {
+          desc = model.description
+        }
+        if ('content' in model) {
+          desc = model.content
+        }
+
+        const node = {
+          id: modelToId(key, model),
+          title: name,
+          desc: desc,
+          type: key,
+        } as Node
+
+        if (desc == null) {
+          delete node.desc
+        }
+
+        return node
+      })
+
+      return models
+    }
+  )
+
+  return nodes
+}
+
+function stateToEdges(state: ModelState): Edge[] {
+  const components = [...state.components.values()]
+  const technologies = [...state.technologies.values()]
+  const dataEntities = [...state.dataEntities.values()]
+  const controls = [...state.controls.values()]
+  const attackSteps = [...state.attackSteps.values()]
+  const threatScenarios = [...state.threatScenarios.values()]
+  const damageScenarios = [...state.damageScenarios.values()]
+  const compromises = [...state.compromises.values()]
+
+  const componentComponent = toMany(
+    components,
+    'component',
+    components,
+    'component',
+    'communicates_with'
+  )
+
+  const componentTechnology = toMany(
+    components,
+    'component',
+    technologies,
+    'technology',
+    'technology'
+  )
+
+  const dataEntityComponent = toOne(
+    dataEntities,
+    'dataEntity',
+    'component',
+    'component',
+    state.components
+  )
+
+  const dataEntityTechnology = toMany(
+    dataEntities,
+    'dataEntity',
+    technologies,
+    'technology',
+    'technology'
+  )
+
+  const controlComponent = toOne(
+    controls,
+    'control',
+    'component',
+    'component',
+    state.components
+  )
+
+  const attackStepComponent = toOne(
+    attackSteps,
+    'attackStep',
+    'component',
+    'component',
+    state.components
+  )
+
+  const attackStepControls = toMany(
+    attackSteps,
+    'attackStep',
+    controls,
+    'control',
+    'control'
+  )
+
+  const attackStepSelf = toMany(
+    attackSteps,
+    'attackStep',
+    attackSteps,
+    'attackStep',
+    'prepared_by'
+  )
+
+  const attackStepThreatClass = toOne(
+    attackSteps,
+    'attackStep',
+    'threat_class',
+    'threatClass',
+    state.threatClasses
+  )
+
+  const threatScenarioAttackStep = toOne(
+    threatScenarios,
+    'threatScenario',
+    'attackStep',
+    'attackStep',
+    state.attackSteps
+  )
+
+  const threatScenarioThreatClass = toOne(
+    threatScenarios,
+    'threatScenario',
+    'threat_class',
+    'threatClass',
+    state.threatClasses
+  )
+
+  const damageScenarioComponent = toOne(
+    damageScenarios,
+    'damageScenario',
+    'component',
+    'component',
+    state.components
+  )
+
+  const damageScenarioThreatScenario = toOne(
+    damageScenarios,
+    'damageScenario',
+    'threat_scenario',
+    'threatScenario',
+    state.threatScenarios
+  )
+
+  const compromiseComponent = toOne(
+    compromises,
+    'compromise',
+    'component',
+    'component',
+    state.components
+  )
+
+  const compromiseThreatScenario = toOne(
+    compromises,
+    'compromise',
+    'threat_scenario',
+    'threatScenario',
+    state.threatScenarios
+  )
+
+  const all = [
+    ...componentComponent,
+    ...componentTechnology,
+    ...dataEntityComponent,
+    ...dataEntityTechnology,
+    ...controlComponent,
+    ...attackStepComponent,
+    ...attackStepControls,
+    ...attackStepSelf,
+    ...attackStepThreatClass,
+    ...threatScenarioAttackStep,
+    ...threatScenarioThreatClass,
+    ...damageScenarioComponent,
+    ...damageScenarioThreatScenario,
+    ...compromiseComponent,
+    ...compromiseThreatScenario,
+  ]
+
+  return all.map((id): Edge => {
+    const split = id.split('-')
+    return {
+      id: id,
+      from: split[0],
+      to: split[1],
+    }
+  })
+}
+
+function modelToId(type: ModelType, model: Model) {
+  return `${model.id}.${type}`
+}
+
+function toOne<T extends Model, U extends Model>(
+  current: T[],
+  currentModelType: ModelType,
+  key: keyof T,
+  targetModelType: ModelType,
+  map: Map<number, U>
+): string[] {
+  return current
+    .map((cur): string | null => {
+      const thisKey = modelToId(currentModelType, cur)
+      const id = +cur[key]
+      const t = map.get(id)
+      if (t == undefined) {
+        return null
+      }
+      return [thisKey, modelToId(targetModelType, t)].join('-')
+    })
+    .filter((el) => el != null)
+}
+
+function toMany<T extends Model, U extends Model>(
+  current: T[],
+  currentModelType: ModelType,
+  target: U[],
+  targetModelType: ModelType,
+  key: keyof T
+): string[] {
+  return current.flatMap((cur): string[] => {
+    const thisKey = modelToId(currentModelType, cur)
+    const ids = cur[key] as number[]
+    const others = target.filter((c) => ids.includes(c.id))
+    return others.map((other) =>
+      [thisKey, modelToId(targetModelType, other)].join('-')
+    )
+  })
 }
