@@ -6,10 +6,11 @@ import {
   type DefinitionTreeNode,
 } from './DefinitionTreeItem'
 import { modelToId, useModelStore, type ModelState } from '@/store/model-store'
+import { useSelectedItem } from '@/context/SelectedItemContext'
 
 export function DefinitionTree() {
   const [filter, setFilter] = useState('')
-  const [selected, setSelected] = useState('')
+  const { selectedItem, setSelectedItem } = useSelectedItem()
   const state = useModelStore((state) => state.state)
   const tree = useMemo(() => modelStateToTreeItems(state), [state])
   return (
@@ -28,8 +29,8 @@ export function DefinitionTree() {
             <DefinitionTreeItem
               key={n.id}
               node={n}
-              onSelect={setSelected}
-              selectedId={selected}
+              onSelect={setSelectedItem}
+              selectedId={selectedItem ?? ''}
               filter={filter}
             />
           ))}

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import {
   ReactFlow,
   type Edge as FlowEdge,
+  type Node as FlowNode,
   Background,
   BackgroundVariant,
   Controls,
@@ -10,6 +11,7 @@ import {
   useEdgesState,
   addEdge,
   type OnConnect,
+  type NodeMouseHandler,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
@@ -19,6 +21,7 @@ import { FloatingEdge } from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import { useModelStore } from '@/store/model-store'
 import type { ModelType } from '@/types/models'
+import { useSelectedItem } from '@/context/SelectedItemContext'
 
 interface MainCardViewProps {
   nodes: Node[]
@@ -68,8 +71,14 @@ const connectionLineStyle = {
 }
 
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
-  const isConnectable = useModelStore(store => store.isConnectable)
-  const addConnection = useModelStore(store => store.addConnection)
+  const { setSelectedItem } = useSelectedItem()
+
+  const onClick: NodeMouseHandler<CardNodeType> = (e, node) => {
+    setSelectedItem(node.id)
+  }
+
+  const isConnectable = useModelStore((store) => store.isConnectable)
+  const addConnection = useModelStore((store) => store.addConnection)
   const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState(
     castNodes(nodes)
   )
@@ -81,9 +90,21 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
     (params) => {
       const [fromId, fromType] = params.source.split('.')
       const [toId, toType] = params.target.split('.')
-      if (isConnectable(+fromId, fromType as ModelType, +toId, toType as ModelType)) {
+      if (
+        isConnectable(
+          +fromId,
+          fromType as ModelType,
+          +toId,
+          toType as ModelType
+        )
+      ) {
         setFlowEdges((eds) => addEdge(params, eds))
-        addConnection(+fromId, fromType as ModelType, +toId, toType as ModelType)
+        addConnection(
+          +fromId,
+          fromType as ModelType,
+          +toId,
+          toType as ModelType
+        )
       }
     },
     [addConnection, isConnectable, setFlowEdges]
@@ -106,6 +127,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineComponent={CustomConnectionLine}
         connectionLineStyle={connectionLineStyle}
+        onNodeClick={onClick}
         fitView
       >
         <Controls />
