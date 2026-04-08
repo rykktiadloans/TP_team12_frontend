@@ -11,24 +11,14 @@ import { ConsoleWindow } from '@/components/layout/ConsoleWindow'
 import { DetailsWindow } from '@/components/layout/DetailsWindow'
 import {
   SelectedItemProvider,
-  useSelectedItem,
 } from '@/context/SelectedItemContext'
 import { useState } from 'react'
-import { ReactFlowProvider, useStore } from '@xyflow/react'
 
 export default function ProjectPage() {
-  const [resetSelectedElements, addSelectedNodes] = useStore((state) => [
-    state.resetSelectedElements,
-    state.addSelectedNodes,
-  ])
   const [selectedItem, setSelectedItem] = useState(null as null | string)
   const defaultValue = {
     selectedItem,
-    setSelectedItem(item: null | string) {
-      setSelectedItem(item)
-      resetSelectedElements([])
-      addSelectedNodes([item].filter((i) => i != null))
-    },
+    setSelectedItem
   }
   return (
     <div className="w-screen h-screen flex flex-col">
