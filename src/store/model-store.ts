@@ -5,6 +5,7 @@ import type {
   ControlModel,
   DamageScenarioModel,
   DataEntityModel,
+  Model,
   ModelType,
   NodeModel,
   TechnologyModel,
@@ -350,4 +351,8 @@ export function connectionProperty(
   } as Record<ModelType, Record<ModelType, string | undefined>>
 
   return table[current][target] ?? null
+}
+
+export function modelToId(type: ModelType, model: Model) {
+  return `${model.id}.${type}`
 }

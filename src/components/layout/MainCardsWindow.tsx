@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { MainCardView } from '../cards/MainCardView'
 import {
   keyToModelType,
+  modelToId,
   useModelStore,
   type ModelState,
 } from '@/store/model-store'
@@ -248,10 +249,6 @@ function stateToEdges(state: ModelState): Edge[] {
       to: split[1],
     }
   })
-}
-
-function modelToId(type: ModelType, model: Model) {
-  return `${model.id}.${type}`
 }
 
 function toOne<T extends Model, U extends Model>(
