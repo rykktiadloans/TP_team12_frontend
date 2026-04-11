@@ -35,9 +35,6 @@ export function MainCardsWindow() {
         <div className="font-medium">Main</div>
         <div className="text-xs text-muted-foreground">Connections view</div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" type="button">
-            Refresh
-          </Button>
           <NewModelButton />
         </div>
       </div>

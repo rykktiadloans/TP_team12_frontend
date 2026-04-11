@@ -48,7 +48,7 @@ export function DetailsWindow() {
     <div className="h-full w-full flex flex-col">
       <div className="px-3 py-2 border-b">
         <div className="text-sm font-medium flex items-center gap-2">
-          {title} <Badge>{type}</Badge>
+          {title} {selected.selectedItem ? <Badge>{type}</Badge> : null}
         </div>
       </div>
 

@@ -12,6 +12,7 @@ import {
   addEdge,
   type OnConnect,
   type NodeMouseHandler,
+  type OnSelectionChangeFunc,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
@@ -83,7 +84,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const [flowEdges, setFlowEdges, onFlowEdgesChange] =
     useEdgesState(castedEdges)
 
-  const [prev, setPrev] = useState<[CardNodeType[], FlowEdge[]]>([
+  const [prev, setPrev] = useState([
     castedNodes,
     castedEdges,
   ])
@@ -91,6 +92,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   if (!lodashIsequal(prev, [castedNodes, castedEdges])) {
     const newNodes = castedNodes.map((node, index) => {
       const same = flowNodes.find((n) => n.id == node.id)
+      node.selected = same?.selected ?? false
       if (same == undefined) {
         return node
       }
@@ -102,16 +104,10 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
     setFlowEdges([...castedEdges])
   }
 
-  const onClick: NodeMouseHandler<CardNodeType> = (e, node) => {
-    setSelectedItem(node.id)
-    const newNodes = flowNodes.map((cur) => {
-      if (node.id == cur.id) {
-        return { ...cur, selected: true }
-      }
-      return { ...cur, selected: false }
-    })
-    setFlowNodes([...newNodes])
-    setFlowEdges([...castedEdges])
+  const onSelect: OnSelectionChangeFunc<CardNodeType> = (params) => {
+    const node = params.nodes[0] ?? null
+    const id = node ? node.id : null
+    setSelectedItem(id)
   }
 
   const onConnect = useCallback<OnConnect>(
@@ -155,7 +151,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineComponent={CustomConnectionLine}
         connectionLineStyle={connectionLineStyle}
-        onNodeClick={onClick}
+        onSelectionChange={onSelect}
         connectOnClick={false}
         fitView
       >
