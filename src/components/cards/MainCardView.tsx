@@ -74,10 +74,6 @@ const connectionLineStyle = {
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const { setSelectedItem } = useSelectedItem()
 
-  const onClick: NodeMouseHandler<CardNodeType> = (e, node) => {
-    setSelectedItem(node.id)
-  }
-
   const isConnectable = useModelStore((store) => store.isConnectable)
   const addConnection = useModelStore((store) => store.addConnection)
   const castedNodes = useMemo(() => castNodes(nodes), [nodes])
@@ -100,7 +96,18 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
     setPrev([newNodes, castedEdges])
     setFlowNodes(newNodes)
     setFlowEdges(castedEdges)
-    console.log('set')
+  }
+
+  const onClick: NodeMouseHandler<CardNodeType> = (e, node) => {
+    setSelectedItem(node.id)
+    const newNodes = flowNodes.map((cur) => {
+      if (node.id == cur.id) {
+        return { ...cur, selected: true }
+      }
+      return { ...cur, selected: false }
+    })
+    setFlowNodes([ ...newNodes ])
+    setFlowEdges(castedEdges)
   }
 
   const onConnect = useCallback<OnConnect>(
