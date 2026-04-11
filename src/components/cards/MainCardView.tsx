@@ -90,12 +90,16 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
 
   if (!lodashIsequal(prev, [castedNodes, castedEdges])) {
     const newNodes = castedNodes.map((node, index) => {
-      node.position = flowNodes[index].position
+      const same = flowNodes.find((n) => n.id == node.id)
+      if (same == undefined) {
+        return node
+      }
+      node.position = same.position
       return node
     })
     setPrev([newNodes, castedEdges])
-    setFlowNodes(newNodes)
-    setFlowEdges(castedEdges)
+    setFlowNodes([...newNodes])
+    setFlowEdges([...castedEdges])
   }
 
   const onClick: NodeMouseHandler<CardNodeType> = (e, node) => {
@@ -106,8 +110,8 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
       }
       return { ...cur, selected: false }
     })
-    setFlowNodes([ ...newNodes ])
-    setFlowEdges(castedEdges)
+    setFlowNodes([...newNodes])
+    setFlowEdges([...castedEdges])
   }
 
   const onConnect = useCallback<OnConnect>(
@@ -152,6 +156,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
         connectionLineComponent={CustomConnectionLine}
         connectionLineStyle={connectionLineStyle}
         onNodeClick={onClick}
+        connectOnClick={false}
         fitView
       >
         <Controls />

@@ -8,6 +8,7 @@ import {
   type ModelState,
 } from '@/store/model-store'
 import type { Model, ModelType } from '@/types/models'
+import { NewModelButton } from '../new-model/NewModelButton'
 
 export type Node = {
   id: string
@@ -37,9 +38,7 @@ export function MainCardsWindow() {
           <Button size="sm" variant="outline" type="button">
             Refresh
           </Button>
-          <Button size="sm" type="button" onClick={() => console.log(state)}>
-            New
-          </Button>
+          <NewModelButton />
         </div>
       </div>
 

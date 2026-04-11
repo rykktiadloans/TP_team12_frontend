@@ -33,11 +33,11 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const node = model.item as NodeModel
     const setTitle: ChangeEventHandler<HTMLInputElement> = (event) => {
       node.title = event.target.value
-      setModel({ type: model.type, item: node })
+      setModel({ type: model.type, item: {...node} })
     }
     const setContent: ChangeEventHandler<HTMLInputElement> = (event) => {
       node.content = event.target.value
-      setModel({ type: model.type, item: node })
+      setModel({ type: model.type, item: {...node} })
     }
     return (
       <form>
@@ -63,11 +63,11 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const technology = model.item as TechnologyModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       technology.name = event.target.value
-      setModel({ type: model.type, item: technology })
+      setModel({ type: model.type, item: {...technology} })
     }
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
       technology.description = event.target.value
-      setModel({ type: model.type, item: technology })
+      setModel({ type: model.type, item: {...technology} })
     }
     return (
       <form>
@@ -99,11 +99,11 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const component = model.item as ComponentModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       component.name = event.target.value
-      setModel({ type: model.type, item: component })
+      setModel({ type: model.type, item: {...component} })
     }
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
       component.description = event.target.value
-      setModel({ type: model.type, item: component })
+      setModel({ type: model.type, item: {...component} })
     }
     return (
       <form>
@@ -133,11 +133,11 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const dataEntity = model.item as DataEntityModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       dataEntity.name = event.target.value
-      setModel({ type: model.type, item: dataEntity })
+      setModel({ type: model.type, item: {...dataEntity} })
     }
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
       dataEntity.description = event.target.value
-      setModel({ type: model.type, item: dataEntity })
+      setModel({ type: model.type, item: {...dataEntity} })
     }
     return (
       <form>
@@ -169,27 +169,27 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const control = model.item as ControlModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.name = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     const setFrEt: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.fr_et = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     const setFrSe: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.fr_se = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     const setFrKoc: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.fr_koC = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     const setFrWoO: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.fr_WoO = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     const setFrEq: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.fr_eq = event.target.value
-      setModel({ type: model.type, item: control })
+      setModel({ type: model.type, item: {...control} })
     }
     return (
       <form>
@@ -247,11 +247,11 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const threatClass = model.item as ThreatClassModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       threatClass.name = event.target.value
-      setModel({ type: model.type, item: threatClass })
+      setModel({ type: model.type, item: {...threatClass} })
     }
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
       threatClass.description = event.target.value
-      setModel({ type: model.type, item: threatClass })
+      setModel({ type: model.type, item: {...threatClass} })
     }
     return (
       <form>
@@ -283,27 +283,27 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const attackStep = model.item as AttackStepModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.name = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrEt: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.fr_et = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrSe: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.fr_se = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrKoc: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.fr_koC = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrWoO: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.fr_WoO = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrEq: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.fr_eq = event.target.value
-      setModel({ type: model.type, item: attackStep })
+      setModel({ type: model.type, item: {...attackStep} })
     }
     return (
       <form>
@@ -365,7 +365,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const threatScenario = model.item as ThreatScenarioModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       threatScenario.name = event.target.value
-      setModel({ type: model.type, item: threatScenario })
+      setModel({ type: model.type, item: {...threatScenario} })
     }
     return (
       <form>
@@ -387,37 +387,37 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const damageScenario = model.item as DamageScenarioModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       damageScenario.name = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setAffectedCIAParts: ChangeEventHandler<HTMLInputElement> = (
       event
     ) => {
       damageScenario.affected_CIA_parts = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setImpactScale: ChangeEventHandler<HTMLInputElement> = (event) => {
       damageScenario.impact_scale = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setSafetyImpact: ChangeEventHandler<HTMLInputElement> = (event) => {
       damageScenario.safety_impact = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setFinancialImpact: ChangeEventHandler<HTMLInputElement> = (
       event
     ) => {
       damageScenario.finantial_impact = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setOperationalImpact: ChangeEventHandler<HTMLInputElement> = (
       event
     ) => {
       damageScenario.operational_impact = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     const setPrivacyImpact: ChangeEventHandler<HTMLInputElement> = (event) => {
       damageScenario.privacy_impact = event.target.value
-      setModel({ type: model.type, item: damageScenario })
+      setModel({ type: model.type, item: {...damageScenario} })
     }
     return (
       <form>
@@ -501,7 +501,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       event
     ) => {
       compromise.affected_CIA_parts = event.target.value
-      setModel({ type: model.type, item: compromise })
+      setModel({ type: model.type, item: {...compromise} })
     }
     return (
       <form>

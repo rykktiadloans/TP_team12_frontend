@@ -188,7 +188,7 @@ function modelStateToTreeItems(state: ModelState): DefinitionTreeNode[] {
           children: values.map(
             (compromise): DefinitionTreeNode => ({
               id: modelToId('compromise', compromise),
-              label: String(compromise.id),
+              label: `Compromise ${compromise.id}`,
               kind: 'sub-component',
             })
           ),

@@ -32,6 +32,8 @@ export interface ModelStore {
   state: ModelState
   getItem: (id: string) => Model | null
   setItem: (type: ModelType, model: Model) => void
+  addItem: (type: ModelType, model: Model) => void
+  deleteItem: (id: string) => void
   isConnectable: (
     fromId: number,
     fromType: ModelType,
@@ -214,7 +216,95 @@ export const useModelStore = create<ModelStore>((set, get) => ({
         break
     }
 
-    set({state: {...state}})
+    set({ state: { ...state } })
+    console.log('updated')
+  },
+
+  addItem: (type: ModelType, model: Model) => {
+    const state = get().state
+    let map
+    switch (type) {
+      case 'node':
+        map = state.nodes
+        break
+      case 'technology':
+        map = state.technologies
+        break
+      case 'component':
+        map = state.components
+        break
+      case 'dataEntity':
+        map = state.dataEntities
+        break
+      case 'control':
+        map = state.controls
+        break
+      case 'threatClass':
+        map = state.threatClasses
+        break
+      case 'attackStep':
+        map = state.attackSteps
+        break
+      case 'threatScenario':
+        map = state.threatScenarios
+        break
+      case 'damageScenario':
+        map = state.damageScenarios
+        break
+      case 'compromise':
+        map = state.compromises
+        break
+    }
+
+    const maxId = Math.max(...[...map.values()].map((model) => model.id))
+    const nextId = isFinite(maxId) && !isNaN(maxId) ? maxId + 1 : 0
+
+    map.set(nextId, {...model, id: nextId})
+
+    set({ state: { ...state } })
+    console.log('updated')
+  },
+
+  deleteItem: (id: string) => {
+    const [idStr, type] = id.split('.')
+    const state = get().state
+    let map
+    switch (type) {
+      case 'node':
+        map = state.nodes
+        break
+      case 'technology':
+        map = state.technologies
+        break
+      case 'component':
+        map = state.components
+        break
+      case 'dataEntity':
+        map = state.dataEntities
+        break
+      case 'control':
+        map = state.controls
+        break
+      case 'threatClass':
+        map = state.threatClasses
+        break
+      case 'attackStep':
+        map = state.attackSteps
+        break
+      case 'threatScenario':
+        map = state.threatScenarios
+        break
+      case 'damageScenario':
+        map = state.damageScenarios
+        break
+      case 'compromise':
+        map = state.compromises
+        break
+    }
+
+    map?.delete(+idStr)
+
+    set({ state: { ...state } })
     console.log('updated')
   },
 
