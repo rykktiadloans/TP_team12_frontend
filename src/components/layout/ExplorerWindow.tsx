@@ -1,9 +1,8 @@
-import * as React from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DefinitionTree } from "../explorer/DefinitionTree"
+import * as React from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DefinitionTree } from '../explorer/DefinitionTree'
 
 export function ExplorerWindow() {
-
   return (
     <div className="h-full w-full flex flex-col">
       <Tabs defaultValue="tree" className="h-full w-full flex flex-col">
@@ -16,7 +15,7 @@ export function ExplorerWindow() {
         </div>
 
         <TabsContent value="tree" className="flex-1 mt-0">
-        <DefinitionTree />
+          <DefinitionTree />
         </TabsContent>
 
         <TabsContent value="search" className="flex-1 mt-0">

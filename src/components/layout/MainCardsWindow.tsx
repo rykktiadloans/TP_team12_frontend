@@ -24,9 +24,10 @@ export type Edge = {
 }
 
 export function MainCardsWindow() {
-  const state = useModelStore((state) => state.state)
-  const nodes = React.useMemo(() => stateToNodes(state), [state])
-  const edges = React.useMemo(() => stateToEdges(state), [state])
+  const store = useModelStore()
+  const state = store.state
+  const nodes = stateToNodes(state)
+  const edges = stateToEdges(state)
   return (
     <div className="h-full w-full flex flex-col">
       <div className="px-4 py-3 border-b flex items-center gap-2">
@@ -36,11 +37,7 @@ export function MainCardsWindow() {
           <Button size="sm" variant="outline" type="button">
             Refresh
           </Button>
-          <Button
-            size="sm"
-            type="button"
-            onClick={() => console.log(state)}
-          >
+          <Button size="sm" type="button" onClick={() => console.log(state)}>
             New
           </Button>
         </div>
@@ -51,18 +48,22 @@ export function MainCardsWindow() {
   )
 }
 
+export function getName(model: Model): string {
+  if ('title' in model) {
+    return String(model.title)
+  }
+  if ('name' in model) {
+    return String(model.name)
+  }
+  return 'Compromise ' + model.id
+}
+
 function stateToNodes(state: ModelState): Node[] {
   const nodes = Object.entries(state).flatMap(
     ([name, map]: [string, Map<number, Model>]) => {
       const key = keyToModelType(name as keyof ModelState)
       const models = [...map.values()].map((model): Node => {
-        let name = 'Compromise ' + model.id
-        if ('title' in model) {
-          name = String(model.title)
-        }
-        if ('name' in model) {
-          name = String(model.name)
-        }
+        const name = getName(model)
 
         let desc = null
         if ('description' in model) {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   ReactFlow,
   type Edge as FlowEdge,
@@ -22,6 +22,7 @@ import CustomConnectionLine from './CustomConnectionLine'
 import { useModelStore } from '@/store/model-store'
 import type { ModelType } from '@/types/models'
 import { useSelectedItem } from '@/context/SelectedItemContext'
+import lodashIsequal from 'lodash.isequal'
 
 interface MainCardViewProps {
   nodes: Node[]
@@ -79,12 +80,28 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
 
   const isConnectable = useModelStore((store) => store.isConnectable)
   const addConnection = useModelStore((store) => store.addConnection)
-  const [flowNodes, setFlowNodes, onFlowNodesChange] = useNodesState(
-    castNodes(nodes)
-  )
-  const [flowEdges, setFlowEdges, onFlowEdgesChange] = useEdgesState(
-    castEdges(edges)
-  )
+  const castedNodes = useMemo(() => castNodes(nodes), [nodes])
+  const castedEdges = useMemo(() => castEdges(edges), [edges])
+  const [flowNodes, setFlowNodes, onFlowNodesChange] =
+    useNodesState(castedNodes)
+  const [flowEdges, setFlowEdges, onFlowEdgesChange] =
+    useEdgesState(castedEdges)
+
+  const [prev, setPrev] = useState<[CardNodeType[], FlowEdge[]]>([
+    castedNodes,
+    castedEdges,
+  ])
+
+  if (!lodashIsequal(prev, [castedNodes, castedEdges])) {
+    const newNodes = castedNodes.map((node, index) => {
+      node.position = flowNodes[index].position
+      return node
+    })
+    setPrev([newNodes, castedEdges])
+    setFlowNodes(newNodes)
+    setFlowEdges(castedEdges)
+    console.log('set')
+  }
 
   const onConnect = useCallback<OnConnect>(
     (params) => {

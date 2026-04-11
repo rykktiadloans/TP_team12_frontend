@@ -11,7 +11,7 @@ import { useSelectedItem } from '@/context/SelectedItemContext'
 export function DefinitionTree() {
   const [filter, setFilter] = useState('')
   const { selectedItem, setSelectedItem } = useSelectedItem()
-  const state = useModelStore((state) => state.state)
+  const state = useModelStore(store => store.state)
   const tree = useMemo(() => modelStateToTreeItems(state), [state])
   return (
     <>

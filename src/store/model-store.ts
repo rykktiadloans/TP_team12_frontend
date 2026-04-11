@@ -30,6 +30,8 @@ export interface ModelState {
 
 export interface ModelStore {
   state: ModelState
+  getItem: (id: string) => Model | null
+  setItem: (type: ModelType, model: Model) => void
   isConnectable: (
     fromId: number,
     fromType: ModelType,
@@ -41,7 +43,7 @@ export interface ModelStore {
     fromType: ModelType,
     toId: number,
     toType: ModelType
-  ) => void,
+  ) => void
   addConnection: (
     fromId: number,
     fromType: ModelType,
@@ -110,16 +112,17 @@ const testState: ModelState = {
     ],
   ]),
   dataEntities: new Map<number, DataEntityModel>([
-    [1,
+    [
+      1,
       {
         id: 1,
         name: 'Data entity',
         description: 'some',
         component: 1,
         technology: [],
-        project: 1
-      }
-    ]
+        project: 1,
+      },
+    ],
   ]),
   controls: new Map<number, ControlModel>([]),
   threatClasses: new Map<number, ThreatClassModel>([]),
@@ -131,6 +134,89 @@ const testState: ModelState = {
 
 export const useModelStore = create<ModelStore>((set, get) => ({
   state: testState,
+
+  getItem: (id: string) => {
+    if (id.split('.').length < 2) {
+      return null
+    }
+    const state = get().state
+    const n = +id.split('.')[0]
+    const type = id.split('.')[1] as ModelType
+    switch (type) {
+      case 'node':
+        return state.nodes.get(n) ?? null
+      case 'technology':
+        return state.technologies.get(n) ?? null
+      case 'component':
+        return state.components.get(n) ?? null
+      case 'dataEntity':
+        return state.dataEntities.get(n) ?? null
+      case 'control':
+        return state.controls.get(n) ?? null
+      case 'threatClass':
+        return state.threatClasses.get(n) ?? null
+      case 'attackStep':
+        return state.attackSteps.get(n) ?? null
+      case 'threatScenario':
+        return state.threatScenarios.get(n) ?? null
+      case 'damageScenario':
+        return state.damageScenarios.get(n) ?? null
+      case 'compromise':
+        return state.compromises.get(n) ?? null
+      default:
+        return null
+    }
+  },
+
+  setItem: (type: ModelType, model: Model) => {
+    const state = get().state
+    let map
+    switch (type) {
+      case 'node':
+        map = state.nodes
+        map.set(model.id, model as NodeModel)
+        break
+      case 'technology':
+        map = state.technologies
+        map.set(model.id, model as TechnologyModel)
+        break
+      case 'component':
+        map = state.components
+        map.set(model.id, model as ComponentModel)
+        break
+      case 'dataEntity':
+        map = state.dataEntities
+        map.set(model.id, model as DataEntityModel)
+        break
+      case 'control':
+        map = state.controls
+        map.set(model.id, model as ControlModel)
+        break
+      case 'threatClass':
+        map = state.threatClasses
+        map.set(model.id, model as ThreatClassModel)
+        break
+      case 'attackStep':
+        map = state.attackSteps
+        map.set(model.id, model as AttackStepModel)
+        break
+      case 'threatScenario':
+        map = state.threatScenarios
+        map.set(model.id, model as ThreatScenarioModel)
+        break
+      case 'damageScenario':
+        map = state.damageScenarios
+        map.set(model.id, model as DamageScenarioModel)
+        break
+      case 'compromise':
+        map = state.compromises
+        map.set(model.id, model as CompromisesModel)
+        break
+    }
+
+    set({state: {...state}})
+    console.log('updated')
+  },
 
   isConnectable: (
     fromId: number,
@@ -356,3 +442,4 @@ export function connectionProperty(
 export function modelToId(type: ModelType, model: Model) {
   return `${model.id}.${type}`
 }
+

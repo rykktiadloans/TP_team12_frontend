@@ -1,7 +1,8 @@
 .move-handle {
-    position: absolute;
-    right: -1em;
-    top: -1em;
+  position: absolute;
+  right: -1em;
+  top: -1em;
+  cursor: grab;
 }
 
 div.customHandle {
