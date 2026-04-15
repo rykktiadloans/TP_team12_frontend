@@ -9,17 +9,23 @@ import { DetailsWindow } from "@/components/layout/DetailsWindow"
 export default function ProjectPage() {
   return (
     <div className="w-screen h-screen flex flex-col">
-      <Header/>
-      <Toolbar/>
-      <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0 w-full">
+      <Header />
+      <Toolbar />
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 min-h-0 w-full"
+      >
         <ResizablePanel defaultSize={22} minSize={16}>
-          <ExplorerWindow />
+          <ExplorerWindow projectId={1} />
         </ResizablePanel>
 
         <ResizableHandle />
 
         <ResizablePanel defaultSize={56} minSize={30}>
-          <ResizablePanelGroup direction="vertical" className="flex-1 min-h-0 w-full">
+          <ResizablePanelGroup
+            direction="vertical"
+            className="flex-1 min-h-0 w-full"
+          >
             <ResizablePanel defaultSize={70} minSize={30}>
               <MainCardsWindow />
             </ResizablePanel>
