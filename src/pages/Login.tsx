@@ -20,7 +20,7 @@ type LoginProps = {
 
 export default function Login({ onLoginSuccess }: LoginProps) {
   const [backendUrl, setBackendUrl] = useState(
-    localStorage.getItem('backendUrl') || 'http://localhost:8000'
+    sessionStorage.getItem('backendUrl') || 'http://localhost:8000'
   )
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

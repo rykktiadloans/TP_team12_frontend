@@ -47,7 +47,7 @@ export default function ProjectSelector({
         }
       } catch (err: any) {
         console.error(err)
-        setError('Nepodarilo sa načítať projekty.')
+        setError('Couldnt load projects')
       } finally {
         setLoading(false)
       }
@@ -60,7 +60,7 @@ export default function ProjectSelector({
     if (!selectedProjectId) return
 
     setSubmitting(true)
-    localStorage.setItem('projectId', selectedProjectId)
+    sessionStorage.setItem('projectId', selectedProjectId)
     onProjectSelected()
   }
 

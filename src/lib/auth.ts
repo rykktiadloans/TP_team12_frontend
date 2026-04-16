@@ -1,7 +1,9 @@
 import { api } from "./api.ts"
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
 export async function login({ backendUrl, username, password }) {
-  localStorage.setItem('backendUrl', backendUrl)
+  sessionStorage.setItem('backendUrl', backendUrl)
 
   const res = await api.post('/token/', {
     username,
@@ -10,13 +12,13 @@ export async function login({ backendUrl, username, password }) {
 
   const { access, refresh } = res.data
 
-  localStorage.setItem('accessToken', access)
-  localStorage.setItem('refreshToken', refresh)
+  sessionStorage.setItem('accessToken', access)
+  sessionStorage.setItem('refreshToken', refresh)
 
   return res.data
 }
 
 export function logout() {
-  localStorage.removeItem("accessToken")
-  localStorage.removeItem("refreshToken")
+  sessionStorage.removeItem("accessToken")
+  sessionStorage.removeItem("refreshToken")
 }

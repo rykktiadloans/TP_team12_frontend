@@ -5,11 +5,11 @@ import ProjectPage from './pages/ProjectPage'
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem('accessToken')
+    !!sessionStorage.getItem('accessToken')
   )
 
   const [hasProject, setHasProject] = useState(
-    !!localStorage.getItem('projectId')
+    !!sessionStorage.getItem('projectId')
   )
 
   if (!isAuthenticated) {
@@ -18,7 +18,7 @@ export default function App() {
         onLoginSuccess={() => {
           setIsAuthenticated(true)
           setHasProject(false)
-          localStorage.removeItem('projectId')
+          sessionStorage.removeItem('projectId')
         }}
       />
     )

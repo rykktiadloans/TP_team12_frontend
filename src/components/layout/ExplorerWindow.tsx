@@ -22,7 +22,8 @@ import {
   Search,
 } from 'lucide-react'
 
-import { getProjectTree, type TreeNode } from '@/lib/GetProjectTree'
+import type { TreeNode } from '@/lib/GetProjectTree'
+import { useModelStore } from '@/store/model-store'
 
 function matchesFilter(node: TreeNode, q: string): boolean {
   if (!q.trim()) return true
@@ -54,12 +55,12 @@ function getNodeIcon(kind?: TreeNode['kind']) {
 }
 
 function TreeItem({
-  node,
-  depth = 0,
-  onSelect,
-  selectedId,
-  filter,
-}: {
+                    node,
+                    depth = 0,
+                    onSelect,
+                    selectedId,
+                    filter,
+                  }: {
   node: TreeNode
   depth?: number
   onSelect?: (id: string) => void
@@ -141,29 +142,17 @@ type ExplorerWindowProps = {
 
 export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
   const [filter, setFilter] = React.useState('')
-  const [selectedId, setSelectedId] = React.useState<string>('')
-  const [tree, setTree] = React.useState<TreeNode[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState('')
+
+  const tree = useModelStore((s) => s.tree)
+  const loading = useModelStore((s) => s.treeLoading)
+  const error = useModelStore((s) => s.treeError)
+  const selectedId = useModelStore((s) => s.selectedId)
+  const loadTree = useModelStore((s) => s.loadTree)
+  const setSelectedId = useModelStore((s) => s.setSelectedId)
 
   React.useEffect(() => {
-    async function loadTree() {
-      setLoading(true)
-      setError('')
-
-      try {
-        const data = await getProjectTree(projectId)
-        setTree(data)
-      } catch (err) {
-        console.error(err)
-        setError('Tree couldnt be loaded')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadTree()
-  }, [projectId])
+    void loadTree(projectId)
+  }, [projectId, loadTree])
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -178,7 +167,6 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
           />
         </div>
       </div>
-
 
       <ScrollArea className="flex-1 px-2 py-3">
         {loading ? (
