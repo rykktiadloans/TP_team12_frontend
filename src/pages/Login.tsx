@@ -19,8 +19,12 @@ type LoginProps = {
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
+  const defaultBackendUrl =
+    typeof window === 'undefined'
+      ? 'http://127.0.0.1:8000'
+      : `${window.location.protocol}//${window.location.hostname}:8000`
   const [backendUrl, setBackendUrl] = useState(
-    sessionStorage.getItem('backendUrl') || 'http://localhost:8000'
+    sessionStorage.getItem('backendUrl') || defaultBackendUrl
   )
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -76,7 +80,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   <Input
                     id="backendUrl"
                     type="text"
-                    placeholder="http://localhost:8000"
+                    placeholder={defaultBackendUrl}
                     value={backendUrl}
                     onChange={(e) => setBackendUrl(e.target.value)}
                     className="pl-10"

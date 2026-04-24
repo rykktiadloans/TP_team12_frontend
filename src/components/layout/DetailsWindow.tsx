@@ -22,10 +22,14 @@ export function DetailsWindow() {
   ) as ModelType
   const title = item ? getName(item) : 'Unselected'
 
-  const onDelete = () => {
+  const onDelete = async () => {
     if (selected.selectedItem) {
       selected.setSelectedItem(null)
-      deleteItem(selected.selectedItem)
+      try {
+        await deleteItem(selected.selectedItem)
+      } catch (error) {
+        console.error(error)
+      }
     }
   }
 

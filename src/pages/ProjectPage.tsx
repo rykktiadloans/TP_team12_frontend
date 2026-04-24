@@ -10,14 +10,29 @@ import { MainCardsWindow } from '@/components/layout/MainCardsWindow'
 import { ConsoleWindow } from '@/components/layout/ConsoleWindow'
 import { DetailsWindow } from '@/components/layout/DetailsWindow'
 import { SelectedItemProvider } from '@/context/SelectedItemContext'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useModelStore } from '@/store/model-store'
 
 export default function ProjectPage() {
   const [selectedItem, setSelectedItem] = useState(null as null | string)
-  const defaultValue = {
-    selectedItem,
-    setSelectedItem,
-  }
+  const loadProjectState = useModelStore((store) => store.loadProjectState)
+  const projectId = sessionStorage.getItem('projectId')
+
+  useEffect(() => {
+    if (!projectId) {
+      return
+    }
+
+    void loadProjectState(projectId)
+  }, [loadProjectState, projectId])
+
+  const defaultValue = useMemo(
+    () => ({
+      selectedItem,
+      setSelectedItem,
+    }),
+    [selectedItem]
+  )
   return (
     <div className="w-screen h-screen flex flex-col">
       <SelectedItemProvider value={defaultValue}>
@@ -28,7 +43,7 @@ export default function ProjectPage() {
           className="flex-1 min-h-0 w-full"
         >
           <ResizablePanel defaultSize={22} minSize={16}>
-            <ExplorerWindow projectId={sessionStorage.getItem('projectId')} />
+            <ExplorerWindow projectId={projectId} />
           </ResizablePanel>
 
           <ResizableHandle />

@@ -52,7 +52,14 @@ export function FloatingEdge({ id, source, target, markerEnd, style }: Props) {
       const [fromId, fromType] = source.split('.')
       const [toId, toType] = target.split('.')
 
-      deleteConnection(+fromId, fromType as ModelType, +toId, toType as ModelType)
+      void deleteConnection(
+        +fromId,
+        fromType as ModelType,
+        +toId,
+        toType as ModelType
+      ).catch((error) => {
+        console.error(error)
+      })
       deleteElements({ edges: [{ id }] })
     }
   }

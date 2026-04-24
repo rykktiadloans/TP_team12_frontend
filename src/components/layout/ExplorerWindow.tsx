@@ -24,6 +24,8 @@ import {
 
 import type { TreeNode } from '@/lib/GetProjectTree'
 import { useModelStore } from '@/store/model-store'
+import { useSelectedItem } from '@/context/SelectedItemContext'
+import type { ComponentModel } from '@/types/models'
 
 function matchesFilter(node: TreeNode, q: string): boolean {
   if (!q.trim()) return true
@@ -52,6 +54,43 @@ function getNodeIcon(kind?: TreeNode['kind']) {
     default:
       return ToyBrick
   }
+}
+
+function mergeLocalComponentsIntoTree(
+  tree: TreeNode[],
+  components: ComponentModel[]
+): TreeNode[] {
+  const localComponentNodes = components.map(
+    (component): TreeNode => ({
+      id: `${component.id}.component`,
+      label: component.name?.trim() || `Component ${component.id}`,
+      kind: 'component',
+      raw: component,
+      children: [],
+    })
+  )
+
+  if (localComponentNodes.length === 0) {
+    return tree
+  }
+
+  if (tree.length === 0) {
+    return localComponentNodes
+  }
+
+  const baseTree = tree.filter(
+    (node) => !(node.badge === 'empty' && node.children?.length === 1)
+  )
+  const treeById = new Map(baseTree.map((node) => [node.id, node]))
+  const merged = [...baseTree]
+
+  for (const componentNode of localComponentNodes) {
+    if (!treeById.has(componentNode.id)) {
+      merged.push(componentNode)
+    }
+  }
+
+  return merged
 }
 
 function TreeItem({
@@ -137,22 +176,45 @@ function TreeItem({
 }
 
 type ExplorerWindowProps = {
-  projectId: string | number
+  projectId: string | number | null
 }
 
 export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
   const [filter, setFilter] = React.useState('')
+  const selected = useSelectedItem()
 
   const tree = useModelStore((s) => s.tree)
   const loading = useModelStore((s) => s.treeLoading)
   const error = useModelStore((s) => s.treeError)
   const selectedId = useModelStore((s) => s.selectedId)
   const loadTree = useModelStore((s) => s.loadTree)
-  const setSelectedId = useModelStore((s) => s.setSelectedId)
+  const setStoreSelectedId = useModelStore((s) => s.setSelectedId)
+  const modelState = useModelStore((s) => s.state)
 
   React.useEffect(() => {
+    if (!projectId) {
+      return
+    }
     void loadTree(projectId)
   }, [projectId, loadTree])
+
+  const activeSelectedId = selected.selectedItem ?? selectedId
+  const components = React.useMemo(
+    () => [...modelState.components.values()],
+    [modelState]
+  )
+  const visibleTree = React.useMemo(
+    () => mergeLocalComponentsIntoTree(tree, components),
+    [tree, components]
+  )
+
+  const handleSelect = React.useCallback(
+    (id: string) => {
+      setStoreSelectedId(id)
+      selected.setSelectedItem(id)
+    },
+    [selected, setStoreSelectedId]
+  )
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -175,16 +237,18 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
           </div>
         ) : error ? (
           <div className="p-3 text-sm text-destructive">{error}</div>
-        ) : tree.length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">No data.</div>
+        ) : visibleTree.length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">
+            No components yet. Create a component to start building the project tree.
+          </div>
         ) : (
           <div className="space-y-1">
-            {tree.map((n) => (
+            {visibleTree.map((n) => (
               <TreeItem
                 key={n.id}
                 node={n}
-                onSelect={setSelectedId}
-                selectedId={selectedId}
+                onSelect={handleSelect}
+                selectedId={activeSelectedId}
                 filter={filter}
               />
             ))}

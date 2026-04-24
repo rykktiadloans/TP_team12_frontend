@@ -25,10 +25,9 @@ export type Edge = {
 }
 
 export function MainCardsWindow() {
-  const store = useModelStore()
-  const state = store.state
-  const nodes = stateToNodes(state)
-  const edges = stateToEdges(state)
+  const state = useModelStore((store) => store.state)
+  const nodes = React.useMemo(() => stateToNodes(state), [state])
+  const edges = React.useMemo(() => stateToEdges(state), [state])
   return (
     <div className="h-full w-full flex flex-col">
       <div className="px-4 py-3 border-b flex items-center gap-2">
@@ -39,7 +38,18 @@ export function MainCardsWindow() {
         </div>
       </div>
 
-      <MainCardView nodes={nodes} edges={edges} />
+      {nodes.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-6 text-center">
+          <div>
+            <div className="text-sm font-medium">This project has no models yet.</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Start by creating a component, then connect the rest of the TARA items to it.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <MainCardView nodes={nodes} edges={edges} />
+      )}
     </div>
   )
 }
@@ -153,7 +163,7 @@ function stateToEdges(state: ModelState): Edge[] {
     'attackStep',
     controls,
     'control',
-    'control'
+    'controls'
   )
 
   const attackStepSelf = toMany(
@@ -172,12 +182,20 @@ function stateToEdges(state: ModelState): Edge[] {
     state.threatClasses
   )
 
-  const threatScenarioAttackStep = toOne(
+  const threatScenarioAttackStep = toMany(
     threatScenarios,
     'threatScenario',
+    attackSteps,
     'attackStep',
+    'attack_steps'
+  )
+
+  const attackStepThreatScenarios = toMany(
+    attackSteps,
     'attackStep',
-    state.attackSteps
+    threatScenarios,
+    'threatScenario',
+    'threat_scenarios'
   )
 
   const threatScenarioThreatClass = toOne(
@@ -196,12 +214,20 @@ function stateToEdges(state: ModelState): Edge[] {
     state.components
   )
 
-  const damageScenarioThreatScenario = toOne(
+  const threatScenarioDamageScenario = toMany(
+    threatScenarios,
+    'threatScenario',
     damageScenarios,
     'damageScenario',
-    'threat_scenario',
+    'damage_scenarios'
+  )
+
+  const damageScenarioThreatScenario = toMany(
+    damageScenarios,
+    'damageScenario',
+    threatScenarios,
     'threatScenario',
-    state.threatScenarios
+    'threat_scenarios'
   )
 
   const compromiseComponent = toOne(
@@ -230,8 +256,10 @@ function stateToEdges(state: ModelState): Edge[] {
     ...attackStepControls,
     ...attackStepSelf,
     ...attackStepThreatClass,
+    ...attackStepThreatScenarios,
     ...threatScenarioAttackStep,
     ...threatScenarioThreatClass,
+    ...threatScenarioDamageScenario,
     ...damageScenarioComponent,
     ...damageScenarioThreatScenario,
     ...compromiseComponent,

@@ -15,6 +15,15 @@ import type {
 
 import { create } from 'zustand'
 import { getProjectTree, type TreeNode } from '@/lib/GetProjectTree'
+import { getProjectState } from '@/lib/getProjectState'
+import {
+  createModel,
+  deleteModel as deleteApiModel,
+  supportsApiCreateType,
+  supportsApiDeleteType,
+  supportsApiUpdateType,
+  updateModel,
+} from '@/lib/modelApi'
 
 export interface ModelState {
   nodes: Map<number, NodeModel>
@@ -39,6 +48,7 @@ export interface ModelStore {
   selectedId: string
   treeProjectId: string | number | null
 
+  loadProjectState: (projectId: string | number) => Promise<void>
   loadTree: (projectId: string | number) => Promise<void>
   setSelectedId: (id: string) => void
   clearTree: () => void
@@ -46,8 +56,8 @@ export interface ModelStore {
   // existing model store API
   getItem: (id: string) => Model | null
   setItem: (type: ModelType, model: Model) => void
-  addItem: (type: ModelType, model: Model) => void
-  deleteItem: (id: string) => void
+  addItem: (type: ModelType, model: Model) => Promise<void>
+  deleteItem: (id: string) => Promise<void>
   isConnectable: (
     fromId: number,
     fromType: ModelType,
@@ -59,97 +69,83 @@ export interface ModelStore {
     fromType: ModelType,
     toId: number,
     toType: ModelType
-  ) => void
+  ) => Promise<void>
   addConnection: (
     fromId: number,
     fromType: ModelType,
     toId: number,
     toType: ModelType
-  ) => void
+  ) => Promise<void>
 }
 
-const defaultState: ModelState = {
-  nodes: new Map(),
-  technologies: new Map(),
-  components: new Map(),
-  dataEntities: new Map(),
-  controls: new Map(),
-  threatClasses: new Map(),
-  attackSteps: new Map(),
-  threatScenarios: new Map(),
-  damageScenarios: new Map(),
-  compromises: new Map(),
+function createEmptyState(): ModelState {
+  return {
+    nodes: new Map<number, NodeModel>(),
+    technologies: new Map<number, TechnologyModel>(),
+    components: new Map<number, ComponentModel>(),
+    dataEntities: new Map<number, DataEntityModel>(),
+    controls: new Map<number, ControlModel>(),
+    threatClasses: new Map<number, ThreatClassModel>(),
+    attackSteps: new Map<number, AttackStepModel>(),
+    threatScenarios: new Map<number, ThreatScenarioModel>(),
+    damageScenarios: new Map<number, DamageScenarioModel>(),
+    compromises: new Map<number, CompromisesModel>(),
+  }
 }
 
-const testState: ModelState = {
-  nodes: new Map<number, NodeModel>([]),
-  technologies: new Map<number, TechnologyModel>([
-    [
-      1,
-      {
-        id: 1,
-        name: 'Technology name 1',
-        description: 'desc',
-        project: 1,
-      },
-    ],
-    [
-      2,
-      {
-        id: 2,
-        name: 'Second technology',
-        description: 'Something',
-        project: 1,
-      },
-    ],
-  ]),
-  components: new Map<number, ComponentModel>([
-    [
-      1,
-      {
-        id: 1,
-        name: 'Component',
-        description: 'Something',
-        communicates_with: [2],
-        technology: [1],
-        project: 1,
-      },
-    ],
-    [
-      2,
-      {
-        id: 2,
-        name: 'Component of 2',
-        description: 'Something else',
-        communicates_with: [1],
-        technology: [],
-        project: 1,
-      },
-    ],
-  ]),
-  dataEntities: new Map<number, DataEntityModel>([
-    [
-      1,
-      {
-        id: 1,
-        name: 'Data entity',
-        description: 'some',
-        component: 1,
-        technology: [],
-        project: 1,
-      },
-    ],
-  ]),
-  controls: new Map<number, ControlModel>([]),
-  threatClasses: new Map<number, ThreatClassModel>([]),
-  attackSteps: new Map<number, AttackStepModel>([]),
-  threatScenarios: new Map<number, ThreatScenarioModel>([]),
-  damageScenarios: new Map<number, DamageScenarioModel>([]),
-  compromises: new Map<number, CompromisesModel>([]),
+function getMapForType(state: ModelState, type: ModelType): Map<number, Model> {
+  return state[modelTypeToKey(type)] as Map<number, Model>
+}
+
+function refreshTreeIfLoaded(get: () => ModelStore) {
+  const treeProjectId = get().treeProjectId
+  if (treeProjectId != null) {
+    void get().loadTree(treeProjectId)
+  }
+}
+
+function resolveConnectionDirection(
+  state: ModelState,
+  fromId: number,
+  fromType: ModelType,
+  toId: number,
+  toType: ModelType
+) {
+  const directProperty = connectionProperty(fromType, toType)
+  if (directProperty) {
+    const source = getMapForType(state, fromType).get(fromId)
+    if (source) {
+      return {
+        source,
+        sourceId: fromId,
+        sourceType: fromType,
+        targetId: toId,
+        targetType: toType,
+        property: directProperty,
+      }
+    }
+  }
+
+  const reverseProperty = connectionProperty(toType, fromType)
+  if (reverseProperty) {
+    const source = getMapForType(state, toType).get(toId)
+    if (source) {
+      return {
+        source,
+        sourceId: toId,
+        sourceType: toType,
+        targetId: fromId,
+        targetType: fromType,
+        property: reverseProperty,
+      }
+    }
+  }
+
+  return null
 }
 
 export const useModelStore = create<ModelStore>((set, get) => ({
-  state: testState,
+  state: createEmptyState(),
 
   // explorer/tree slice
   tree: [],
@@ -157,6 +153,46 @@ export const useModelStore = create<ModelStore>((set, get) => ({
   treeError: '',
   selectedId: '',
   treeProjectId: null,
+
+  loadProjectState: async (projectId: string | number) => {
+    try {
+      const projectState = await getProjectState(projectId)
+
+      set({
+        state: {
+          nodes: new Map<number, NodeModel>(),
+          technologies: new Map(
+            projectState.technologies.map((item) => [item.id, item])
+          ),
+          components: new Map(
+            projectState.components.map((item) => [item.id, item])
+          ),
+          dataEntities: new Map(
+            projectState.dataEntities.map((item) => [item.id, item])
+          ),
+          controls: new Map(projectState.controls.map((item) => [item.id, item])),
+          threatClasses: new Map(
+            projectState.threatClasses.map((item) => [item.id, item])
+          ),
+          attackSteps: new Map(
+            projectState.attackSteps.map((item) => [item.id, item])
+          ),
+          threatScenarios: new Map(
+            projectState.threatScenarios.map((item) => [item.id, item])
+          ),
+          damageScenarios: new Map(
+            projectState.damageScenarios.map((item) => [item.id, item])
+          ),
+          compromises: new Map(
+            projectState.compromises.map((item) => [item.id, item])
+          ),
+        },
+      })
+    } catch (error) {
+      console.error(error)
+      set({ state: createEmptyState() })
+    }
+  },
 
   loadTree: async (projectId: string | number) => {
     set({
@@ -188,6 +224,7 @@ export const useModelStore = create<ModelStore>((set, get) => ({
   clearTree: () => {
     set({
       tree: [],
+      state: createEmptyState(),
       treeLoading: false,
       treeError: '',
       selectedId: '',
@@ -278,52 +315,26 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     console.log('updated')
   },
 
-  addItem: (type: ModelType, model: Model) => {
+  addItem: async (type: ModelType, model: Model) => {
     const state = get().state
-    let map
-    switch (type) {
-      case 'node':
-        map = state.nodes
-        break
-      case 'technology':
-        map = state.technologies
-        break
-      case 'component':
-        map = state.components
-        break
-      case 'dataEntity':
-        map = state.dataEntities
-        break
-      case 'control':
-        map = state.controls
-        break
-      case 'threatClass':
-        map = state.threatClasses
-        break
-      case 'attackStep':
-        map = state.attackSteps
-        break
-      case 'threatScenario':
-        map = state.threatScenarios
-        break
-      case 'damageScenario':
-        map = state.damageScenarios
-        break
-      case 'compromise':
-        map = state.compromises
-        break
+    const map = getMapForType(state, type)
+
+    if (supportsApiCreateType(type)) {
+      const savedModel = await createModel(type, model)
+      map.set(savedModel.id, savedModel)
+      set({ state: { ...state } })
+      refreshTreeIfLoaded(get)
+      return
     }
 
-    const maxId = Math.max(...[...map.values()].map((model) => model.id))
+    const maxId = Math.max(...[...map.values()].map((currentModel) => currentModel.id))
     const nextId = isFinite(maxId) && !isNaN(maxId) ? maxId + 1 : 0
 
     map.set(nextId, { ...model, id: nextId })
-
     set({ state: { ...state } })
-    console.log('updated')
   },
 
-  deleteItem: (id: string) => {
+  deleteItem: async (id: string) => {
     const [idStr, type] = id.split('.')
     const state = get().state
     let map
@@ -360,10 +371,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
         break
     }
 
+    if (supportsApiDeleteType(type as ModelType)) {
+      await deleteApiModel(type as ModelType, +idStr)
+      refreshTreeIfLoaded(get)
+    }
+
     map?.delete(+idStr)
 
     set({ state: { ...state } })
-    console.log('updated')
   },
 
   isConnectable: (
@@ -373,91 +388,122 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     toType: ModelType
   ): boolean => {
     const state = get().state
-    const map = state[modelTypeToKey(fromType)]
-    const from = map.get(fromId)
-    if (from == undefined) {
+    const resolved = resolveConnectionDirection(
+      state,
+      fromId,
+      fromType,
+      toId,
+      toType
+    )
+    if (!resolved) {
       return false
     }
-    const connection = connectionProperty(fromType, toType)
-    if (connection == null) {
-      return false
-    }
-    const value = from[connection] as number | number[] | undefined
+    const value = (resolved.source as any)[resolved.property] as
+      | number
+      | number[]
+      | undefined
     if (value == undefined) {
       return true
     }
     if (typeof value == 'number') {
-      return false
+      return value !== resolved.targetId
     }
-    return !value.includes(toId)
+    return !value.includes(resolved.targetId)
   },
 
-  deleteConnection: (
+  deleteConnection: async (
     fromId: number,
     fromType: ModelType,
     toId: number,
     toType: ModelType
-  ): void => {
+  ): Promise<void> => {
     const state = get().state
-    const map = state[modelTypeToKey(fromType)]
-    const from = map.get(fromId)
-    if (from == undefined) {
-      throw new Error(`Source not found! ${fromId} ${fromType}`)
-    }
-    const connection = connectionProperty(fromType, toType)
-    if (connection == null) {
+    const resolved = resolveConnectionDirection(
+      state,
+      fromId,
+      fromType,
+      toId,
+      toType
+    )
+    if (!resolved) {
       throw new Error(`Connection not found!`)
     }
-    const value = from[connection] as number | number[] | undefined
+    const map = getMapForType(state, resolved.sourceType)
+    const source = { ...resolved.source } as any
+    const value = source[resolved.property] as number | number[] | undefined
     if (value == undefined) {
       throw new Error(`Value not found!`)
     }
     if (typeof value == 'number') {
-      from[connection] = null
-      map.set(fromId, from)
-      state[modelTypeToKey(fromType)] = map
-      set({ state })
+      source[resolved.property] = null
+      if (supportsApiUpdateType(resolved.sourceType)) {
+        const savedModel = await updateModel(resolved.sourceType, source)
+        map.set(savedModel.id, savedModel as any)
+        refreshTreeIfLoaded(get)
+      } else {
+        map.set(resolved.sourceId, source)
+      }
+      set({ state: { ...state } })
       return
     }
-    value.splice(value.indexOf(toId), 1)
-    from[connection] = value
-    map.set(fromId, from)
-    state[modelTypeToKey(fromType)] = map
-    set({ state })
+    source[resolved.property] = value.filter((item) => item !== resolved.targetId)
+    if (supportsApiUpdateType(resolved.sourceType)) {
+      const savedModel = await updateModel(resolved.sourceType, source)
+      map.set(savedModel.id, savedModel as any)
+      refreshTreeIfLoaded(get)
+    } else {
+      map.set(resolved.sourceId, source)
+    }
+    set({ state: { ...state } })
   },
 
-  addConnection: (
+  addConnection: async (
     fromId: number,
     fromType: ModelType,
     toId: number,
     toType: ModelType
-  ): void => {
+  ): Promise<void> => {
     const state = get().state
-    const map = state[modelTypeToKey(fromType)]
-    const from = map.get(fromId)
-    if (from == undefined) {
-      throw new Error(`Source not found! ${fromId} ${fromType}`)
-    }
-    const connection = connectionProperty(fromType, toType)
-    if (connection == null) {
+    const resolved = resolveConnectionDirection(
+      state,
+      fromId,
+      fromType,
+      toId,
+      toType
+    )
+    if (!resolved) {
       throw new Error(`Connection not found!`)
     }
-    const value = from[connection] as number | number[] | undefined
+    const map = getMapForType(state, resolved.sourceType)
+    const source = { ...resolved.source } as any
+    const value = source[resolved.property] as number | number[] | undefined
     if (value == undefined) {
-      from[connection] = toId
-      map.set(fromId, from)
-      state[modelTypeToKey(fromType)] = map
-      set({ state })
+      source[resolved.property] = resolved.targetId
+      if (supportsApiUpdateType(resolved.sourceType)) {
+        const savedModel = await updateModel(resolved.sourceType, source)
+        map.set(savedModel.id, savedModel as any)
+        refreshTreeIfLoaded(get)
+      } else {
+        map.set(resolved.sourceId, source)
+      }
+      set({ state: { ...state } })
       return
     }
     if (typeof value == 'number') {
       throw new Error(`Value already present`)
     }
-    value.push(toId)
-    from[connection] = value
-    map.set(fromId, from)
-    state[modelTypeToKey(fromType)] = map
-    set({ state })
+    if (value.includes(resolved.targetId)) {
+      return
+    }
+    source[resolved.property] = [...value, resolved.targetId]
+    if (supportsApiUpdateType(resolved.sourceType)) {
+      const savedModel = await updateModel(resolved.sourceType, source)
+      map.set(savedModel.id, savedModel as any)
+      refreshTreeIfLoaded(get)
+    } else {
+      map.set(resolved.sourceId, source)
+    }
+    set({ state: { ...state } })
   },
 }))
 
@@ -515,15 +561,17 @@ export function connectionType(
       ['component', 'one'],
       ['control', 'many'],
       ['attackStep', 'many'],
+      ['threatScenario', 'many'],
       ['threatClass', 'one'],
     ],
     threatScenario: [
-      ['attackStep', 'one'],
+      ['attackStep', 'many'],
+      ['damageScenario', 'many'],
       ['threatClass', 'one'],
     ],
     damageScenario: [
       ['component', 'one'],
-      ['threatScenario', 'one'],
+      ['threatScenario', 'many'],
     ],
     compromise: [
       ['component', 'one'],
@@ -561,17 +609,19 @@ export function connectionProperty(
     threatClass: {},
     attackStep: {
       component: 'component',
-      control: 'control',
+      control: 'controls',
       attackStep: 'prepared_by',
+      threatScenario: 'threat_scenarios',
       threatClass: 'threat_class',
     },
     threatScenario: {
-      attackStep: 'attackStep',
+      attackStep: 'attack_steps',
+      damageScenario: 'damage_scenarios',
       threatClass: 'threat_class',
     },
     damageScenario: {
       component: 'component',
-      threatScenario: 'threat_scenario',
+      threatScenario: 'threat_scenarios',
     },
     compromise: {
       component: 'component',
@@ -585,4 +635,3 @@ export function connectionProperty(
 export function modelToId(type: ModelType, model: Model) {
   return `${model.id}.${type}`
 }
-

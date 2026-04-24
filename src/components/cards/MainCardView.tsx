@@ -1,17 +1,14 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   type Edge as FlowEdge,
-  type Node as FlowNode,
   Background,
   BackgroundVariant,
   Controls,
   MarkerType,
-  useNodesState,
-  useEdgesState,
-  addEdge,
+  applyNodeChanges,
   type OnConnect,
-  type NodeMouseHandler,
+  type OnNodesChange,
   type OnSelectionChangeFunc,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -74,41 +71,48 @@ const connectionLineStyle = {
 
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const { setSelectedItem } = useSelectedItem()
+  const setStoreSelectedId = useModelStore((store) => store.setSelectedId)
 
   const isConnectable = useModelStore((store) => store.isConnectable)
   const addConnection = useModelStore((store) => store.addConnection)
   const castedNodes = useMemo(() => castNodes(nodes), [nodes])
-  const castedEdges = useMemo(() => castEdges(edges), [edges])
-  const [flowNodes, setFlowNodes, onFlowNodesChange] =
-    useNodesState(castedNodes)
-  const [flowEdges, setFlowEdges, onFlowEdgesChange] =
-    useEdgesState(castedEdges)
+  const flowEdges = useMemo(() => castEdges(edges), [edges])
+  const [flowNodes, setFlowNodes] = useState(castedNodes)
 
-  const [prev, setPrev] = useState([
-    castedNodes,
-    castedEdges,
-  ])
+  useEffect(() => {
+    setFlowNodes((currentNodes) => {
+      const currentById = new Map(currentNodes.map((node) => [node.id, node]))
+      const nextNodes = castedNodes.map((node) => {
+        const currentNode = currentById.get(node.id)
+        if (!currentNode) {
+          return node
+        }
 
-  if (!lodashIsequal(prev, [castedNodes, castedEdges])) {
-    const newNodes = castedNodes.map((node, index) => {
-      const same = flowNodes.find((n) => n.id == node.id)
-      node.selected = same?.selected ?? false
-      if (same == undefined) {
-        return node
-      }
-      node.position = same.position
-      return node
+        return {
+          ...node,
+          position: currentNode.position,
+          selected: currentNode.selected,
+          dragging: currentNode.dragging,
+        }
+      })
+
+      return lodashIsequal(currentNodes, nextNodes) ? currentNodes : nextNodes
     })
-    setPrev([newNodes, castedEdges])
-    setFlowNodes([...newNodes])
-    setFlowEdges([...castedEdges])
-  }
+  }, [castedNodes])
 
   const onSelect: OnSelectionChangeFunc<CardNodeType> = (params) => {
     const node = params.nodes[0] ?? null
     const id = node ? node.id : null
     setSelectedItem(id)
+    setStoreSelectedId(id ?? '')
   }
+
+  const onNodesChange = useCallback<OnNodesChange<CardNodeType>>(
+    (changes) => {
+      setFlowNodes((currentNodes) => applyNodeChanges(changes, currentNodes))
+    },
+    []
+  )
 
   const onConnect = useCallback<OnConnect>(
     (params) => {
@@ -122,31 +126,30 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
           toType as ModelType
         )
       ) {
-        setFlowEdges((eds) => addEdge(params, eds))
-        addConnection(
+        void addConnection(
           +fromId,
           fromType as ModelType,
           +toId,
           toType as ModelType
-        )
+        ).catch((error) => {
+          console.error(error)
+        })
       }
     },
-    [addConnection, isConnectable, setFlowEdges]
+    [addConnection, isConnectable]
   )
 
-  const nodeTypes = useCallback(() => ({ cardNode: CardNode }), [])
-
-  const edgeTypes = useCallback(() => ({ floating: FloatingEdge }), [])
+  const nodeTypes = useMemo(() => ({ cardNode: CardNode }), [])
+  const edgeTypes = useMemo(() => ({ floating: FloatingEdge }), [])
 
   return (
     <div className="h-full w-full">
       <ReactFlow
-        nodeTypes={nodeTypes()}
-        edgeTypes={edgeTypes()}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onFlowNodesChange}
-        onEdgesChange={onFlowEdgesChange}
+        onNodesChange={onNodesChange}
         onConnect={onConnect}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineComponent={CustomConnectionLine}
