@@ -104,6 +104,15 @@ function refreshTreeIfLoaded(get: () => ModelStore) {
   }
 }
 
+function getCurrentProjectId(model?: Model) {
+  if (model && 'project' in model && model.project != null) {
+    return model.project as number
+  }
+
+  const projectId = sessionStorage.getItem('projectId')
+  return projectId ? Number(projectId) : null
+}
+
 function resolveConnectionDirection(
   state: ModelState,
   fromId: number,
@@ -367,8 +376,13 @@ export const useModelStore = create<ModelStore>((set, get) => ({
 
     if (supportsApiCreateType(type)) {
       const savedModel = await createModel(type, model)
-      map.set(savedModel.id, savedModel)
-      set({ state: { ...state } })
+      const projectId = getCurrentProjectId(savedModel)
+      if (projectId != null) {
+        await get().loadProjectState(projectId)
+      } else {
+        map.set(savedModel.id, savedModel)
+        set({ state: { ...state } })
+      }
       refreshTreeIfLoaded(get)
       return savedModel
     }

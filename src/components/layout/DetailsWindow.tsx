@@ -268,15 +268,15 @@ export function DetailsWindow() {
 
       {creatorOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
-            <div className="mb-4">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-background shadow-lg">
+            <div className="px-6 pt-6 pb-4">
               <div className="text-lg font-semibold">Add Related Model</div>
               <div className="text-sm text-muted-foreground">
                 Create a new model and connect it to {title}.
               </div>
             </div>
 
-            <div className="mb-4">
+            <div className="px-6 pb-4">
               <label className="mb-2 block text-sm font-medium" htmlFor="related-model-type">
                 Type
               </label>
@@ -295,56 +295,60 @@ export function DetailsWindow() {
               </select>
             </div>
 
-            {creatorType ? (
-              <div className="mb-4 rounded-md border border-border p-3">
-                <div className="mb-2 text-sm font-medium">Pick Existing</div>
-                {existingCandidates.length ? (
-                  <div className="flex gap-2">
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
-                      value={existingTargetId}
-                      onChange={(event) => setExistingTargetId(event.target.value)}
-                    >
-                      {existingCandidates.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {candidate.label}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      disabled={!existingTargetId}
-                      onClick={handleConnectExisting}
-                    >
-                      Connect Existing
-                    </Button>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6">
+              <div className="space-y-4 pb-4 pr-3">
+                {creatorType ? (
+                  <div className="rounded-md border border-border p-3">
+                    <div className="mb-2 text-sm font-medium">Pick Existing</div>
+                    {existingCandidates.length ? (
+                      <div className="flex gap-2">
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                          value={existingTargetId}
+                          onChange={(event) => setExistingTargetId(event.target.value)}
+                        >
+                          {existingCandidates.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {candidate.label}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          disabled={!existingTargetId}
+                          onClick={handleConnectExisting}
+                        >
+                          Connect Existing
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        No existing {formatModelTypeLabel(creatorType).toLowerCase()} can be connected here right now.
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    No existing {formatModelTypeLabel(creatorType).toLowerCase()} can be connected here right now.
-                  </div>
-                )}
-              </div>
-            ) : null}
+                ) : null}
 
-            {creatorType ? (
-              <div className="mb-4 rounded-md border border-border p-3">
-                <div className="mb-3 text-sm font-medium">Or Create New</div>
-                <ModelForm
-                  model={{ type: creatorType, item: creatorModel }}
-                  setModel={setCreatorFormModel}
-                />
+                {creatorType ? (
+                  <div className="rounded-md border border-border p-3">
+                    <div className="mb-3 text-sm font-medium">Or Create New</div>
+                    <ModelForm
+                      model={{ type: creatorType, item: creatorModel }}
+                      setModel={setCreatorFormModel}
+                    />
+                  </div>
+                ) : null}
               </div>
-            ) : null}
+            </div>
 
             {creatorError ? (
-              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <div className="mx-6 mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {creatorError}
               </div>
             ) : null}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
               <Button variant="outline" type="button" onClick={handleCloseCreator}>
                 Cancel
               </Button>

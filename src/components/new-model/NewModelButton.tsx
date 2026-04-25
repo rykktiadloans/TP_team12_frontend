@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { ModelForm, type ModelFormItem } from '../details/ModelForm'
 import { Button } from '../ui/button'
-import { ScrollArea } from '../ui/scroll-area'
 import type { Model, ModelType } from '@/types/models'
 import { useModelStore } from '@/store/model-store'
 import { createDefaultModel, hasRequiredName } from '@/lib/modelFactory'
@@ -98,14 +97,14 @@ export function NewModelButton({}: Props) {
             </div>
 
             {type ? (
-              <ScrollArea className="min-h-0 flex-1 px-6">
+              <div className="min-h-0 flex-1 overflow-y-auto px-6">
                 <div className="pb-4 pr-3">
                   <ModelForm
                     model={{ type, item: model }}
                     setModel={setFormModel}
                   />
                 </div>
-              </ScrollArea>
+              </div>
             ) : null}
 
             {error ? (
