@@ -51,7 +51,6 @@ type DamageScenarioItem = {
   attack_steps?: Array<number | string>
   affected_CIA_parts?: number | string
   affected_cia_binary?: string
-  component_id?: number | string
   [key: string]: unknown
 }
 
@@ -76,6 +75,7 @@ type AttackStepItem = {
 type ThreatScenarioItem = {
   id: number | string
   name: string
+  components?: Array<number | string>
   attack_steps?: Array<number | string>
   damage_scenarios?: Array<number | string>
   compromises?: Array<{
@@ -184,6 +184,17 @@ function buildThreatScenarioNode(
   nextVisited.add(visitKey)
 
   const children: TreeNode[] = []
+
+  const componentIds = asArray<number | string>(threatScenario.components)
+  if (componentIds.length) {
+    children.push({
+      id: `group-ts-components-${threatScenario.id}`,
+      label: 'Involved Components',
+      kind: 'group',
+      badge: String(componentIds.length),
+      children: componentIds.map((id) => leafFromIdRef('Component', id)),
+    })
+  }
 
   const linkedAttackSteps = asArray<number | string>(threatScenario.attack_steps)
     .map((id) => attackStepsById.get(String(id)))

@@ -621,12 +621,12 @@ export function connectionType(
       ['threatClass', 'one'],
     ],
     threatScenario: [
+      ['component', 'many'],
       ['attackStep', 'many'],
       ['damageScenario', 'many'],
       ['threatClass', 'one'],
     ],
     damageScenario: [
-      ['component', 'one'],
       ['threatScenario', 'many'],
     ],
     compromise: [
@@ -670,12 +670,12 @@ export function connectionProperty(
       threatClass: 'threat_class',
     },
     threatScenario: {
+      component: 'components',
       attackStep: 'attack_steps',
       damageScenario: 'damage_scenarios',
       threatClass: 'threat_class',
     },
     damageScenario: {
-      component: 'component',
       threatScenario: 'threat_scenarios',
     },
     compromise: {

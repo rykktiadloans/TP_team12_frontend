@@ -491,7 +491,13 @@ function getRelatedItems(type: ModelType, item: Model, state: ModelState) {
         {
           label: 'Damage Scenarios',
           items: [...state.damageScenarios.values()]
-            .filter((scenario) => scenario.component === component.id)
+            .filter((scenario) =>
+              (scenario.threat_scenarios ?? []).some((threatScenarioId) =>
+                state.threatScenarios
+                  .get(threatScenarioId)
+                  ?.components.includes(component.id)
+              )
+            )
             .map((scenario) => ({ id: modelToId('damageScenario', scenario), label: scenario.name })),
         },
       ].filter((group) => group.items.length)
@@ -531,16 +537,16 @@ function getRelatedItems(type: ModelType, item: Model, state: ModelState) {
       ].filter((group) => group.items.length)
     }
     case 'threatScenario': {
-      const scenario = item as Model & { attack_steps: number[]; damage_scenarios: number[] }
+      const scenario = item as Model & { components: number[]; attack_steps: number[]; damage_scenarios: number[] }
       return [
+        { label: 'Involved Components', items: listFromIds('component', scenario.components ?? [], state.components as Map<number, Model>) },
         { label: 'Attack Steps', items: listFromIds('attackStep', scenario.attack_steps ?? [], state.attackSteps as Map<number, Model>) },
         { label: 'Damage Scenarios', items: listFromIds('damageScenario', scenario.damage_scenarios ?? [], state.damageScenarios as Map<number, Model>) },
       ].filter((group) => group.items.length)
     }
     case 'damageScenario': {
-      const scenario = item as Model & { component: number | null; threat_scenarios: number[] }
+      const scenario = item as Model & { threat_scenarios: number[] }
       return [
-        { label: 'Component', items: listFromIds('component', scenario.component == null ? [] : [scenario.component], state.components as Map<number, Model>) },
         { label: 'Threat Scenarios', items: listFromIds('threatScenario', scenario.threat_scenarios ?? [], state.threatScenarios as Map<number, Model>) },
       ].filter((group) => group.items.length)
     }

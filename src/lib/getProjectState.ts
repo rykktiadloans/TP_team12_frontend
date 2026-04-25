@@ -20,10 +20,6 @@ type ComponentApiItem = ComponentModel & {
   }>
 }
 
-type DamageScenarioApiItem = Omit<DamageScenarioModel, 'component'> & {
-  component_id?: number | null
-}
-
 type LoadedProjectState = {
   technologies: TechnologyModel[]
   components: ComponentModel[]
@@ -64,7 +60,7 @@ export async function getProjectState(
     getList<ControlModel>('/control/', projectId),
     getList<AttackStepModel>('/attack_step/', projectId),
     getList<Partial<ThreatScenarioModel>>('/threat_scenario/', projectId),
-    getList<DamageScenarioApiItem>('/damage_scenario/', projectId),
+    getList<DamageScenarioModel>('/damage_scenario/', projectId),
   ])
 
   const components = componentsRaw.map((component) => ({
@@ -96,6 +92,7 @@ export async function getProjectState(
       id: scenario.id ?? -1,
       name: scenario.name ?? '',
       description: scenario.description ?? '',
+      components: scenario.components ?? [],
       attack_steps: scenario.attack_steps ?? [],
       damage_scenarios: scenario.damage_scenarios ?? [],
       compromises: scenario.compromises ?? [],
@@ -115,7 +112,6 @@ export async function getProjectState(
       finantial_impact: scenario.finantial_impact,
       operational_impact: scenario.operational_impact,
       privacy_impact: scenario.privacy_impact,
-      component: scenario.component_id ?? null,
       threat_scenarios: scenario.threat_scenarios ?? [],
       project: scenario.project ?? null,
     })

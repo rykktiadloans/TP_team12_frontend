@@ -73,6 +73,7 @@ export function createDefaultModel(type: ModelType): Model {
         id: -1,
         name: '',
         description: '',
+        components: [],
         attack_steps: [],
         damage_scenarios: [],
         compromises: [],
@@ -90,7 +91,6 @@ export function createDefaultModel(type: ModelType): Model {
         finantial_impact: 0,
         operational_impact: 0,
         privacy_impact: 0,
-        component: null,
         threat_scenarios: [],
         project: null,
       } as DamageScenarioModel

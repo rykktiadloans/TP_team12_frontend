@@ -579,6 +579,10 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
 
   if (model.type == 'threatScenario') {
     const threatScenario = model.item as ThreatScenarioModel
+    const availableComponents = [...state.components.values()].map((component) => ({
+      id: component.id,
+      label: component.name || `Component ${component.id}`,
+    }))
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       threatScenario.name = event.target.value
       setModel({ type: model.type, item: {...threatScenario} })
@@ -586,6 +590,28 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
       threatScenario.description = event.target.value
       setModel({ type: model.type, item: {...threatScenario} })
+    }
+    const toggleComponent = (componentId: number, checked: boolean) => {
+      const nextComponents = checked
+        ? [...new Set([...(threatScenario.components ?? []), componentId])]
+        : (threatScenario.components ?? []).filter((id) => id !== componentId)
+
+      setModel({
+        type: model.type,
+        item: { ...threatScenario, components: nextComponents } as ThreatScenarioModel,
+      })
+
+      if (threatScenario.id < 0) {
+        return
+      }
+
+      const promise = checked
+        ? addConnection(threatScenario.id, 'threatScenario', componentId, 'component')
+        : deleteConnection(threatScenario.id, 'threatScenario', componentId, 'component')
+
+      void promise.catch((error) => {
+        console.error(error)
+      })
     }
     return (
       <form>
@@ -604,6 +630,16 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               id="threat-scenario-description"
               value={threatScenario.description}
               onChange={setDescription}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="threat-scenario-components">Involved Components</FieldLabel>
+            <RelationCheckboxList
+              idPrefix="threat-scenario-components"
+              options={availableComponents}
+              selectedIds={threatScenario.components ?? []}
+              onToggle={toggleComponent}
+              emptyLabel="No components available yet."
             />
           </Field>
         </FieldGroup>

@@ -74,6 +74,7 @@ export interface AttackStepModel extends Model{
 export interface ThreatScenarioModel extends Model{
   name: string
   description: string
+  components: number[]
   attack_steps: number[]
   damage_scenarios: number[]
   compromises: number[]
@@ -90,7 +91,6 @@ export interface DamageScenarioModel extends Model{
   finantial_impact: number
   operational_impact: number
   privacy_impact: number
-  component: number | null
   threat_scenarios: number[]
   project: number | null
 }

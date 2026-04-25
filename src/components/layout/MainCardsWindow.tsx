@@ -205,12 +205,12 @@ function stateToEdges(state: ModelState): Edge[] {
     state.threatClasses
   )
 
-  const damageScenarioComponent = toOne(
-    damageScenarios,
-    'damageScenario',
+  const threatScenarioComponent = toMany(
+    threatScenarios,
+    'threatScenario',
+    components,
     'component',
-    'component',
-    state.components
+    'components'
   )
 
   const threatScenarioDamageScenario = toMany(
@@ -257,9 +257,9 @@ function stateToEdges(state: ModelState): Edge[] {
     ...attackStepThreatClass,
     ...attackStepThreatScenarios,
     ...threatScenarioAttackStep,
+    ...threatScenarioComponent,
     ...threatScenarioThreatClass,
     ...threatScenarioDamageScenario,
-    ...damageScenarioComponent,
     ...damageScenarioThreatScenario,
     ...compromiseComponent,
     ...compromiseThreatScenario,

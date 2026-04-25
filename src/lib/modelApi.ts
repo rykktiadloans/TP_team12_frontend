@@ -107,6 +107,7 @@ function toApiPayload(type: ModelType, model: Model) {
       return {
         name: threatScenario.name,
         description: threatScenario.description,
+        components: threatScenario.components ?? [],
         attack_steps: threatScenario.attack_steps ?? [],
         damage_scenarios: threatScenario.damage_scenarios ?? [],
         threat_class: threatScenario.threat_class,
@@ -124,7 +125,6 @@ function toApiPayload(type: ModelType, model: Model) {
         finantial_impact: damageScenario.finantial_impact,
         operational_impact: damageScenario.operational_impact,
         privacy_impact: damageScenario.privacy_impact,
-        component_id: damageScenario.component,
         threat_scenarios: damageScenario.threat_scenarios ?? [],
         project_id: projectId,
       }
@@ -189,6 +189,7 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         id: data.id,
         name: data.name ?? '',
         description: data.description ?? '',
+        components: data.components ?? [],
         attack_steps: data.attack_steps ?? [],
         damage_scenarios: data.damage_scenarios ?? [],
         compromises: data.compromises ?? [],
@@ -206,7 +207,6 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         finantial_impact: data.finantial_impact ?? 0,
         operational_impact: data.operational_impact ?? 0,
         privacy_impact: data.privacy_impact ?? 0,
-        component: data.component_id ?? data.component ?? null,
         threat_scenarios: data.threat_scenarios ?? [],
         project: data.project ?? null,
       } as DamageScenarioModel
