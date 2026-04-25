@@ -69,7 +69,7 @@ type AttackStepItem = {
   component_id?: number | string
   threat_scenarios?: Array<number | string>
   controls?: Array<number | string>
-  prepared_by?: unknown[]
+  previous_steps?: Array<number | string>
   [key: string]: unknown
 }
 
@@ -351,6 +351,46 @@ function buildAttackStepNode(
       kind: 'group',
       badge: String(controlIds.length),
       children: controlIds.map((id) => leafFromIdRef('Control', id)),
+    })
+  }
+
+  const previousStepIds = asArray<number | string>(attackStep.previous_steps)
+  if (previousStepIds.length) {
+    children.push({
+      id: `group-attack-step-previous-steps-${attackStep.id}`,
+      label: 'Previous Steps',
+      kind: 'group',
+      badge: String(previousStepIds.length),
+      children: previousStepIds.map((id) => {
+        const step = attackStepsById.get(String(id))
+        if (!step) return leafFromIdRef('Attack Step', id)
+        return {
+          id: makeModelId('attackStep', String(step.id)),
+          label: safeName(step, 'Attack Step'),
+          kind: 'attack-step',
+          raw: step,
+        }
+      }),
+    })
+  }
+
+  const nextSteps = [...attackStepsById.values()].filter((candidate) =>
+    asArray<number | string>(candidate.previous_steps).some(
+      (id) => String(id) === String(attackStep.id)
+    )
+  )
+  if (nextSteps.length) {
+    children.push({
+      id: `group-attack-step-next-steps-${attackStep.id}`,
+      label: 'Next Steps',
+      kind: 'group',
+      badge: String(nextSteps.length),
+      children: nextSteps.map((step) => ({
+        id: makeModelId('attackStep', String(step.id)),
+        label: safeName(step, 'Attack Step'),
+        kind: 'attack-step',
+        raw: step,
+      })),
     })
   }
 

@@ -7,7 +7,6 @@ import type {
   DataEntityModel,
   Model,
   ModelType,
-  NodeModel,
   TechnologyModel,
   ThreatClassModel,
   ThreatScenarioModel,
@@ -28,6 +27,7 @@ import {
   windowOfOpportunityOptions,
   type Option,
 } from '@/lib/tara'
+import { useModelStore } from '@/store/model-store'
 
 export interface ModelFormItem {
   type: ModelType
@@ -114,36 +114,70 @@ function CIABitmaskCheckboxGroup({
   )
 }
 
-export function ModelForm({ model, setModel = () => {} }: Props) {
-  if (model.type == 'node') {
-    const node = model.item as NodeModel
-    const setTitle: ChangeEventHandler<HTMLInputElement> = (event) => {
-      node.title = event.target.value
-      setModel({ type: model.type, item: {...node} })
-    }
-    const setContent: ChangeEventHandler<HTMLInputElement> = (event) => {
-      node.content = event.target.value
-      setModel({ type: model.type, item: {...node} })
-    }
-    return (
-      <form>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="node-title">Title</FieldLabel>
-            <Input id="node-title" value={node.title} onChange={setTitle} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="node-content">Content</FieldLabel>
-            <Input
-              id="node-content"
-              value={node.content}
-              onChange={setContent}
-            />
-          </Field>
-        </FieldGroup>
-      </form>
-    )
+function RelationCheckboxList({
+  idPrefix,
+  options,
+  selectedIds,
+  onToggle,
+  emptyLabel,
+}: {
+  idPrefix: string
+  options: Array<{ id: number; label: string }>
+  selectedIds: number[]
+  onToggle: (id: number, checked: boolean) => void
+  emptyLabel: string
+}) {
+  if (options.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
   }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {options.map((option) => {
+        const optionId = `${idPrefix}-${option.id}`
+        return (
+          <label key={option.id} htmlFor={optionId} className="flex items-center gap-3 text-sm">
+            <input
+              id={optionId}
+              type="checkbox"
+              className="h-4 w-4 rounded border border-input"
+              checked={selectedIds.includes(option.id)}
+              onChange={(event) => onToggle(option.id, event.target.checked)}
+            />
+            <span>{option.label}</span>
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
+function RelationList({
+  items,
+  emptyLabel,
+}: {
+  items: string[]
+  emptyLabel: string
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span key={item} className="rounded-full border border-border px-2 py-1 text-xs">
+          {item}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+export function ModelForm({ model, setModel = () => {} }: Props) {
+  const state = useModelStore((store) => store.state)
+  const addConnection = useModelStore((store) => store.addConnection)
+  const deleteConnection = useModelStore((store) => store.deleteConnection)
 
   if (model.type == 'technology') {
     const technology = model.item as TechnologyModel
@@ -257,6 +291,10 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       control.name = event.target.value
       setModel({ type: model.type, item: {...control} })
     }
+    const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
+      control.description = event.target.value
+      setModel({ type: model.type, item: {...control} })
+    }
     const setFrEt: ChangeEventHandler<HTMLSelectElement> = (event) => {
       control.fr_et = asNumber(event.target.value)
       setModel({ type: model.type, item: {...control} })
@@ -283,6 +321,14 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
           <Field>
             <FieldLabel htmlFor="control-name">Name</FieldLabel>
             <Input id="control-name" value={control.name} onChange={setName} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="control-description">Description</FieldLabel>
+            <Input
+              id="control-description"
+              value={control.description}
+              onChange={setDescription}
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="control-fr-et">Fr_et</FieldLabel>
@@ -372,8 +418,22 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
 
   if (model.type == 'attackStep') {
     const attackStep = model.item as AttackStepModel
+    const availablePreviousSteps = [...state.attackSteps.values()]
+      .filter((step) => step.id !== attackStep.id)
+      .map((step) => ({ id: step.id, label: step.name || `Attack Step ${step.id}` }))
+    const nextSteps = [...state.attackSteps.values()]
+      .filter((step) => step.previous_steps.includes(attackStep.id))
+      .map((step) => step.name || `Attack Step ${step.id}`)
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       attackStep.name = event.target.value
+      setModel({ type: model.type, item: {...attackStep} })
+    }
+    const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
+      attackStep.description = event.target.value
+      setModel({ type: model.type, item: {...attackStep} })
+    }
+    const setRequiredAccess: ChangeEventHandler<HTMLInputElement> = (event) => {
+      attackStep.required_access = event.target.value
       setModel({ type: model.type, item: {...attackStep} })
     }
     const setFrEt: ChangeEventHandler<HTMLSelectElement> = (event) => {
@@ -396,6 +456,28 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       attackStep.fr_eq = asNumber(event.target.value)
       setModel({ type: model.type, item: {...attackStep} })
     }
+    const togglePreviousStep = (stepId: number, checked: boolean) => {
+      const nextPreviousSteps = checked
+        ? [...new Set([...(attackStep.previous_steps ?? []), stepId])]
+        : (attackStep.previous_steps ?? []).filter((id) => id !== stepId)
+
+      setModel({
+        type: model.type,
+        item: { ...attackStep, previous_steps: nextPreviousSteps } as AttackStepModel,
+      })
+
+      if (attackStep.id < 0) {
+        return
+      }
+
+      const promise = checked
+        ? addConnection(stepId, 'attackStep', attackStep.id, 'attackStep')
+        : deleteConnection(stepId, 'attackStep', attackStep.id, 'attackStep')
+
+      void promise.catch((error) => {
+        console.error(error)
+      })
+    }
     return (
       <form>
         <FieldGroup>
@@ -405,6 +487,44 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               id="attack-step-name"
               value={attackStep.name}
               onChange={setName}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="attack-step-description">Description</FieldLabel>
+            <Input
+              id="attack-step-description"
+              value={attackStep.description}
+              onChange={setDescription}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="attack-step-required-access">
+              Required Access
+            </FieldLabel>
+            <Input
+              id="attack-step-required-access"
+              value={attackStep.required_access}
+              onChange={setRequiredAccess}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="attack-step-previous-steps">Previous Steps</FieldLabel>
+            <RelationCheckboxList
+              idPrefix="attack-step-previous-steps"
+              options={availablePreviousSteps}
+              selectedIds={attackStep.previous_steps ?? []}
+              onToggle={togglePreviousStep}
+              emptyLabel="No other attack steps available yet."
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Select predecessors here and the chain will be rendered in the graph automatically.
+            </p>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="attack-step-next-steps">Next Steps</FieldLabel>
+            <RelationList
+              items={nextSteps}
+              emptyLabel="No next steps point here yet."
             />
           </Field>
           <Field>
@@ -463,6 +583,10 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       threatScenario.name = event.target.value
       setModel({ type: model.type, item: {...threatScenario} })
     }
+    const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
+      threatScenario.description = event.target.value
+      setModel({ type: model.type, item: {...threatScenario} })
+    }
     return (
       <form>
         <FieldGroup>
@@ -474,6 +598,14 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               onChange={setName}
             />
           </Field>
+          <Field>
+            <FieldLabel htmlFor="threat-scenario-description">Description</FieldLabel>
+            <Input
+              id="threat-scenario-description"
+              value={threatScenario.description}
+              onChange={setDescription}
+            />
+          </Field>
         </FieldGroup>
       </form>
     )
@@ -483,6 +615,10 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     const damageScenario = model.item as DamageScenarioModel
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       damageScenario.name = event.target.value
+      setModel({ type: model.type, item: {...damageScenario} })
+    }
+    const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
+      damageScenario.description = event.target.value
       setModel({ type: model.type, item: {...damageScenario} })
     }
     const setAffectedCIAParts = (value: number) => {
@@ -522,6 +658,14 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               id="damage-scenario-name"
               value={damageScenario.name}
               onChange={setName}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="damage-scenario-description">Description</FieldLabel>
+            <Input
+              id="damage-scenario-description"
+              value={damageScenario.description}
+              onChange={setDescription}
             />
           </Field>
           <Field>

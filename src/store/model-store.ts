@@ -7,7 +7,6 @@ import type {
   DataEntityModel,
   Model,
   ModelType,
-  NodeModel,
   TechnologyModel,
   ThreatClassModel,
   ThreatScenarioModel,
@@ -26,7 +25,6 @@ import {
 } from '@/lib/modelApi'
 
 export interface ModelState {
-  nodes: Map<number, NodeModel>
   technologies: Map<number, TechnologyModel>
   components: Map<number, ComponentModel>
   dataEntities: Map<number, DataEntityModel>
@@ -46,17 +44,20 @@ export interface ModelStore {
   treeLoading: boolean
   treeError: string
   selectedId: string
+  focusTargetId: string
   treeProjectId: string | number | null
 
   loadProjectState: (projectId: string | number) => Promise<void>
   loadTree: (projectId: string | number) => Promise<void>
   setSelectedId: (id: string) => void
+  requestFocus: (id: string) => void
+  clearFocus: () => void
   clearTree: () => void
 
   // existing model store API
   getItem: (id: string) => Model | null
   setItem: (type: ModelType, model: Model) => void
-  addItem: (type: ModelType, model: Model) => Promise<void>
+  addItem: (type: ModelType, model: Model) => Promise<Model>
   deleteItem: (id: string) => Promise<void>
   isConnectable: (
     fromId: number,
@@ -80,7 +81,6 @@ export interface ModelStore {
 
 function createEmptyState(): ModelState {
   return {
-    nodes: new Map<number, NodeModel>(),
     technologies: new Map<number, TechnologyModel>(),
     components: new Map<number, ComponentModel>(),
     dataEntities: new Map<number, DataEntityModel>(),
@@ -111,6 +111,50 @@ function resolveConnectionDirection(
   toId: number,
   toType: ModelType
 ) {
+  if (fromId === toId && fromType === toType) {
+    return null
+  }
+
+  if (fromType === 'attackStep' && toType === 'attackStep') {
+    const from = state.attackSteps.get(fromId)
+    const to = state.attackSteps.get(toId)
+    if (!from || !to) {
+      return null
+    }
+
+    if (from.previous_steps.includes(toId)) {
+      return {
+        source: from,
+        sourceId: fromId,
+        sourceType: fromType,
+        targetId: toId,
+        targetType: toType,
+        property: 'previous_steps',
+      }
+    }
+
+    if (to.previous_steps.includes(fromId)) {
+      return {
+        source: to,
+        sourceId: toId,
+        sourceType: toType,
+        targetId: fromId,
+        targetType: fromType,
+        property: 'previous_steps',
+      }
+    }
+
+    // When creating a chain, treat source -> target as "source is previous of target".
+    return {
+      source: to,
+      sourceId: toId,
+      sourceType: toType,
+      targetId: fromId,
+      targetType: fromType,
+      property: 'previous_steps',
+    }
+  }
+
   const directProperty = connectionProperty(fromType, toType)
   if (directProperty) {
     const source = getMapForType(state, fromType).get(fromId)
@@ -152,6 +196,7 @@ export const useModelStore = create<ModelStore>((set, get) => ({
   treeLoading: false,
   treeError: '',
   selectedId: '',
+  focusTargetId: '',
   treeProjectId: null,
 
   loadProjectState: async (projectId: string | number) => {
@@ -160,7 +205,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
 
       set({
         state: {
-          nodes: new Map<number, NodeModel>(),
           technologies: new Map(
             projectState.technologies.map((item) => [item.id, item])
           ),
@@ -221,6 +265,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     set({ selectedId: id })
   },
 
+  requestFocus: (id: string) => {
+    set({ focusTargetId: id })
+  },
+
+  clearFocus: () => {
+    set({ focusTargetId: '' })
+  },
+
   clearTree: () => {
     set({
       tree: [],
@@ -228,6 +280,7 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       treeLoading: false,
       treeError: '',
       selectedId: '',
+      focusTargetId: '',
       treeProjectId: null,
     })
   },
@@ -240,8 +293,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     const n = +id.split('.')[0]
     const type = id.split('.')[1] as ModelType
     switch (type) {
-      case 'node':
-        return state.nodes.get(n) ?? null
       case 'technology':
         return state.technologies.get(n) ?? null
       case 'component':
@@ -269,10 +320,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     const state = get().state
     let map
     switch (type) {
-      case 'node':
-        map = state.nodes
-        map.set(model.id, model as NodeModel)
-        break
       case 'technology':
         map = state.technologies
         map.set(model.id, model as TechnologyModel)
@@ -285,10 +332,10 @@ export const useModelStore = create<ModelStore>((set, get) => ({
         map = state.dataEntities
         map.set(model.id, model as DataEntityModel)
         break
-      case 'control':
-        map = state.controls
-        map.set(model.id, model as ControlModel)
-        break
+    case 'control':
+      map = state.controls
+      map.set(model.id, model as ControlModel)
+      break
       case 'threatClass':
         map = state.threatClasses
         map.set(model.id, model as ThreatClassModel)
@@ -312,7 +359,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     }
 
     set({ state: { ...state } })
-    console.log('updated')
   },
 
   addItem: async (type: ModelType, model: Model) => {
@@ -324,14 +370,16 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       map.set(savedModel.id, savedModel)
       set({ state: { ...state } })
       refreshTreeIfLoaded(get)
-      return
+      return savedModel
     }
 
     const maxId = Math.max(...[...map.values()].map((currentModel) => currentModel.id))
     const nextId = isFinite(maxId) && !isNaN(maxId) ? maxId + 1 : 0
 
-    map.set(nextId, { ...model, id: nextId })
+    const createdModel = { ...model, id: nextId }
+    map.set(nextId, createdModel)
     set({ state: { ...state } })
+    return createdModel
   },
 
   deleteItem: async (id: string) => {
@@ -339,9 +387,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     const state = get().state
     let map
     switch (type) {
-      case 'node':
-        map = state.nodes
-        break
       case 'technology':
         map = state.technologies
         break
@@ -509,7 +554,6 @@ export const useModelStore = create<ModelStore>((set, get) => ({
 
 export function keyToModelType(type: keyof ModelState): ModelType {
   const table = {
-    nodes: 'node',
     technologies: 'technology',
     components: 'component',
     dataEntities: 'dataEntity',
@@ -525,7 +569,6 @@ export function keyToModelType(type: keyof ModelState): ModelType {
 
 export function modelTypeToKey(modelType: ModelType): keyof ModelState {
   const table = {
-    node: 'nodes',
     technology: 'technologies',
     component: 'components',
     dataEntity: 'dataEntities',
@@ -545,7 +588,6 @@ export function connectionType(
   target: ModelType
 ): 'one' | 'many' | null {
   const table = {
-    node: [],
     technology: [],
     component: [
       ['component', 'many'],
@@ -593,7 +635,6 @@ export function connectionProperty(
   target: ModelType
 ): string | null {
   const table = {
-    node: {},
     technology: {},
     component: {
       component: 'communicates_with',
@@ -610,7 +651,7 @@ export function connectionProperty(
     attackStep: {
       component: 'component',
       control: 'controls',
-      attackStep: 'prepared_by',
+      attackStep: 'previous_steps',
       threatScenario: 'threat_scenarios',
       threatClass: 'threat_class',
     },

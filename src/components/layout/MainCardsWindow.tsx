@@ -55,9 +55,6 @@ export function MainCardsWindow() {
 }
 
 export function getName(model: Model): string {
-  if ('title' in model) {
-    return String(model.title)
-  }
   if ('name' in model) {
     return String(model.name)
   }
@@ -69,19 +66,16 @@ function stateToNodes(state: ModelState): Node[] {
     ([name, map]: [string, Map<number, Model>]) => {
       const key = keyToModelType(name as keyof ModelState)
       const models = [...map.values()].map((model): Node => {
-        const name = getName(model)
+      const name = getName(model)
 
-        let desc = null
-        if ('description' in model) {
-          desc = model.description
-        }
-        if ('content' in model) {
-          desc = model.content
-        }
+      let desc = null
+      if ('description' in model) {
+        desc = model.description
+      }
 
-        const node = {
-          id: modelToId(key, model),
-          title: name,
+      const node = {
+        id: modelToId(key, model),
+        title: name,
           desc: desc,
           type: key,
         } as Node
@@ -166,13 +160,18 @@ function stateToEdges(state: ModelState): Edge[] {
     'controls'
   )
 
-  const attackStepSelf = toMany(
-    attackSteps,
-    'attackStep',
-    attackSteps,
-    'attackStep',
-    'prepared_by'
-  )
+  const attackStepSelf = attackSteps.flatMap((step) =>
+    (step.previous_steps ?? []).map((previousStepId) => {
+      const previousStep = state.attackSteps.get(previousStepId)
+      if (!previousStep) {
+        return null
+      }
+      return [
+        modelToId('attackStep', previousStep),
+        modelToId('attackStep', step),
+      ].join('-')
+    })
+  ).filter((edge): edge is string => edge != null)
 
   const attackStepThreatClass = toOne(
     attackSteps,

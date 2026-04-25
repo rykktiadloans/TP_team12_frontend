@@ -16,6 +16,7 @@ type ComponentApiItem = ComponentModel & {
     id: number
     name: string
     description: string
+    technology?: number[]
   }>
 }
 
@@ -83,7 +84,7 @@ export async function getProjectState(
           name: entity.name,
           description: entity.description,
           component: component.id,
-          technology: [],
+          technology: entity.technology ?? [],
           project: component.project ?? null,
         })
       )
@@ -94,6 +95,7 @@ export async function getProjectState(
     (scenario): ThreatScenarioModel => ({
       id: scenario.id ?? -1,
       name: scenario.name ?? '',
+      description: scenario.description ?? '',
       attack_steps: scenario.attack_steps ?? [],
       damage_scenarios: scenario.damage_scenarios ?? [],
       compromises: scenario.compromises ?? [],
@@ -106,6 +108,7 @@ export async function getProjectState(
     (scenario): DamageScenarioModel => ({
       id: scenario.id,
       name: scenario.name,
+      description: scenario.description ?? '',
       affected_CIA_parts: scenario.affected_CIA_parts,
       impact_scale: scenario.impact_scale,
       safety_impact: scenario.safety_impact,
@@ -122,9 +125,18 @@ export async function getProjectState(
     technologies,
     components,
     dataEntities,
-    controls,
+    controls: controls.map((control) => ({
+      ...control,
+      description: control.description ?? '',
+      attack_steps: (control as ControlModel & { attack_steps?: number[] }).attack_steps ?? [],
+    })),
     threatClasses: [],
-    attackSteps,
+    attackSteps: attackSteps.map((step) => ({
+      ...step,
+      description: step.description ?? '',
+      required_access: step.required_access ?? '',
+      previous_steps: step.previous_steps ?? [],
+    })),
     threatScenarios,
     damageScenarios,
     compromises: [],

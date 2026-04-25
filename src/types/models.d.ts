@@ -1,5 +1,4 @@
 export type ModelType = 
-  | 'node'
   | 'technology'
   | 'component'
   | 'dataEntity'
@@ -12,11 +11,6 @@ export type ModelType =
 
 export interface Model {
   id: number
-}
-
-export interface NodeModel extends Model{
-  title: string
-  content: string
 }
 
 export interface TechnologyModel extends Model{
@@ -43,12 +37,14 @@ export interface DataEntityModel extends Model{
 
 export interface ControlModel extends Model {
   name: string
+  description: string
   fr_et: number
   fr_se: number
   fr_koC: number
   fr_WoO: number
   fr_eq: number
   component: number | null
+  attack_steps: number[]
   project: number | null
 }
 
@@ -60,6 +56,8 @@ export interface ThreatClassModel extends Model{
 
 export interface AttackStepModel extends Model{
   name: string
+  description: string
+  required_access: string
   fr_et: number
   fr_se: number
   fr_koC: number
@@ -67,7 +65,7 @@ export interface AttackStepModel extends Model{
   fr_eq: number
   component: number | null
   controls: number[]
-  prepared_by: number[]
+  previous_steps: number[]
   threat_scenarios: number[]
   threat_class: number | null
   project: number | null
@@ -75,6 +73,7 @@ export interface AttackStepModel extends Model{
 
 export interface ThreatScenarioModel extends Model{
   name: string
+  description: string
   attack_steps: number[]
   damage_scenarios: number[]
   compromises: number[]
@@ -84,6 +83,7 @@ export interface ThreatScenarioModel extends Model{
 
 export interface DamageScenarioModel extends Model{
   name: string
+  description: string
   affected_CIA_parts: number
   impact_scale: number
   safety_impact: number

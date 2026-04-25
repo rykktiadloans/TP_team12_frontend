@@ -6,13 +6,11 @@ import type {
   DamageScenarioModel,
   Model,
   ModelType,
-  NodeModel,
   TechnologyModel,
   ThreatScenarioModel,
 } from '@/types/models'
 
 const endpointByType: Partial<Record<ModelType, string>> = {
-  node: '/nodes/',
   technology: '/technology/',
   component: '/component/',
   control: '/control/',
@@ -26,11 +24,11 @@ export function supportsApiCreateType(type: ModelType) {
 }
 
 export function supportsApiUpdateType(type: ModelType) {
-  return type !== 'node' && type in endpointByType
+  return type in endpointByType
 }
 
 export function supportsApiDeleteType(type: ModelType) {
-  return type !== 'node' && type in endpointByType
+  return type in endpointByType
 }
 
 function getProjectId() {
@@ -53,14 +51,6 @@ function toApiPayload(type: ModelType, model: Model) {
   const projectId = getProjectId()
 
   switch (type) {
-    case 'node': {
-      const node = model as NodeModel
-      return {
-        title: node.title,
-        content: node.content,
-        project_id: projectId,
-      }
-    }
     case 'technology': {
       const technology = model as TechnologyModel
       return {
@@ -83,6 +73,7 @@ function toApiPayload(type: ModelType, model: Model) {
       const control = model as ControlModel
       return {
         name: control.name,
+        description: control.description,
         fr_et: control.fr_et,
         fr_se: control.fr_se,
         fr_koC: control.fr_koC,
@@ -96,13 +87,15 @@ function toApiPayload(type: ModelType, model: Model) {
       const attackStep = model as AttackStepModel
       return {
         name: attackStep.name,
+        description: attackStep.description,
+        required_access: attackStep.required_access,
         fr_et: attackStep.fr_et,
         fr_se: attackStep.fr_se,
         fr_koC: attackStep.fr_koC,
         fr_WoO: attackStep.fr_WoO,
         fr_eq: attackStep.fr_eq,
         component: attackStep.component,
-        prepared_by: attackStep.prepared_by ?? [],
+        previous_steps: attackStep.previous_steps ?? [],
         threat_class: attackStep.threat_class,
         threat_scenarios: attackStep.threat_scenarios ?? [],
         controls: attackStep.controls ?? [],
@@ -113,6 +106,7 @@ function toApiPayload(type: ModelType, model: Model) {
       const threatScenario = model as ThreatScenarioModel
       return {
         name: threatScenario.name,
+        description: threatScenario.description,
         attack_steps: threatScenario.attack_steps ?? [],
         damage_scenarios: threatScenario.damage_scenarios ?? [],
         threat_class: threatScenario.threat_class,
@@ -123,6 +117,7 @@ function toApiPayload(type: ModelType, model: Model) {
       const damageScenario = model as DamageScenarioModel
       return {
         name: damageScenario.name,
+        description: damageScenario.description,
         affected_CIA_parts: damageScenario.affected_CIA_parts,
         impact_scale: damageScenario.impact_scale,
         safety_impact: damageScenario.safety_impact,
@@ -141,12 +136,6 @@ function toApiPayload(type: ModelType, model: Model) {
 
 export function normalizeApiModel(type: ModelType, data: any): Model {
   switch (type) {
-    case 'node':
-      return {
-        id: data.id,
-        title: data.title ?? '',
-        content: data.content ?? '',
-      } as NodeModel
     case 'technology':
       return {
         id: data.id,
@@ -167,18 +156,22 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
       return {
         id: data.id,
         name: data.name ?? '',
+        description: data.description ?? '',
         fr_et: data.fr_et ?? 0,
         fr_se: data.fr_se ?? 0,
         fr_koC: data.fr_koC ?? 0,
         fr_WoO: data.fr_WoO ?? 0,
         fr_eq: data.fr_eq ?? 0,
         component: data.component ?? null,
+        attack_steps: data.attack_steps ?? [],
         project: data.project ?? null,
       } as ControlModel
     case 'attackStep':
       return {
         id: data.id,
         name: data.name ?? '',
+        description: data.description ?? '',
+        required_access: data.required_access ?? '',
         fr_et: data.fr_et ?? 0,
         fr_se: data.fr_se ?? 0,
         fr_koC: data.fr_koC ?? 0,
@@ -186,7 +179,7 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         fr_eq: data.fr_eq ?? 0,
         component: data.component ?? null,
         controls: data.controls ?? [],
-        prepared_by: data.prepared_by ?? [],
+        previous_steps: data.previous_steps ?? [],
         threat_scenarios: data.threat_scenarios ?? [],
         threat_class: data.threat_class ?? null,
         project: data.project ?? null,
@@ -195,6 +188,7 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
       return {
         id: data.id,
         name: data.name ?? '',
+        description: data.description ?? '',
         attack_steps: data.attack_steps ?? [],
         damage_scenarios: data.damage_scenarios ?? [],
         compromises: data.compromises ?? [],
@@ -205,6 +199,7 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
       return {
         id: data.id,
         name: data.name ?? '',
+        description: data.description ?? '',
         affected_CIA_parts: data.affected_CIA_parts ?? 0,
         impact_scale: data.impact_scale ?? 0,
         safety_impact: data.safety_impact ?? 0,

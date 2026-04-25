@@ -1,118 +1,15 @@
 import { useState } from 'react'
 import { ModelForm, type ModelFormItem } from '../details/ModelForm'
 import { Button } from '../ui/button'
-import type {
-  AttackStepModel,
-  ComponentModel,
-  CompromisesModel,
-  ControlModel,
-  DamageScenarioModel,
-  DataEntityModel,
-  Model,
-  ModelType,
-  NodeModel,
-  TechnologyModel,
-  ThreatClassModel,
-  ThreatScenarioModel,
-} from '@/types/models'
+import { ScrollArea } from '../ui/scroll-area'
+import type { Model, ModelType } from '@/types/models'
 import { useModelStore } from '@/store/model-store'
+import { createDefaultModel, hasRequiredName } from '@/lib/modelFactory'
 
 interface Props {}
 
-function createDefaultModel(type: ModelType): Model {
-  switch (type) {
-    case 'node':
-      return { id: -1, title: '', content: '' } as NodeModel
-    case 'technology':
-      return { id: -1, name: '', description: '', project: null } as TechnologyModel
-    case 'component':
-      return {
-        id: -1,
-        name: '',
-        description: '',
-        communicates_with: [],
-        technology: [],
-        project: null,
-      } as ComponentModel
-    case 'dataEntity':
-      return {
-        id: -1,
-        name: '',
-        description: '',
-        component: null,
-        technology: [],
-        project: null,
-      } as DataEntityModel
-    case 'control':
-      return {
-        id: -1,
-        name: '',
-        fr_et: 0,
-        fr_se: 0,
-        fr_koC: 0,
-        fr_WoO: 0,
-        fr_eq: 0,
-        component: null,
-        project: null,
-      } as ControlModel
-    case 'threatClass':
-      return { id: -1, name: '', description: '', project: null } as ThreatClassModel
-    case 'attackStep':
-      return {
-        id: -1,
-        name: '',
-        fr_et: 0,
-        fr_se: 0,
-        fr_koC: 0,
-        fr_WoO: 0,
-        fr_eq: 0,
-        component: null,
-        controls: [],
-        prepared_by: [],
-        threat_scenarios: [],
-        threat_class: null,
-        project: null,
-      } as AttackStepModel
-    case 'threatScenario':
-      return {
-        id: -1,
-        name: '',
-        attack_steps: [],
-        damage_scenarios: [],
-        compromises: [],
-        threat_class: null,
-        project: null,
-      } as ThreatScenarioModel
-    case 'damageScenario':
-      return {
-        id: -1,
-        name: '',
-        affected_CIA_parts: 0,
-        impact_scale: 0,
-        safety_impact: 0,
-        finantial_impact: 0,
-        operational_impact: 0,
-        privacy_impact: 0,
-        component: null,
-        threat_scenarios: [],
-        project: null,
-      } as DamageScenarioModel
-    case 'compromise':
-      return {
-        id: -1,
-        compromised_CIA_part: 0,
-        component: null,
-        threat_scenario: null,
-        project: null,
-      } as CompromisesModel
-    default:
-      return { id: -1 }
-  }
-}
-
 export function NewModelButton({}: Props) {
   const types: ModelType[] = [
-    'node',
     'technology',
     'component',
     'dataEntity',
@@ -173,15 +70,15 @@ export function NewModelButton({}: Props) {
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
-            <div className="mb-4">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-background shadow-lg">
+            <div className="px-6 pt-6 pb-4">
               <div className="text-lg font-semibold">New Model</div>
               <div className="text-sm text-muted-foreground">
                 Create a new model
               </div>
             </div>
 
-            <div className="mb-4">
+            <div className="px-6 pb-4">
               <label className="mb-2 block text-sm font-medium" htmlFor="new-model-type">
                 Type
               </label>
@@ -201,25 +98,31 @@ export function NewModelButton({}: Props) {
             </div>
 
             {type ? (
-              <div className="mb-4">
-                <ModelForm
-                  model={{ type, item: model }}
-                  setModel={setFormModel}
-                />
-              </div>
+              <ScrollArea className="min-h-0 flex-1 px-6">
+                <div className="pb-4 pr-3">
+                  <ModelForm
+                    model={{ type, item: model }}
+                    setModel={setFormModel}
+                  />
+                </div>
+              </ScrollArea>
             ) : null}
 
             {error ? (
-              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <div className="mx-6 mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
               </div>
             ) : null}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
               <Button variant="outline" type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="button" disabled={!type} onClick={handleCreate}>
+              <Button
+                type="button"
+                disabled={!type || !hasRequiredName(model)}
+                onClick={handleCreate}
+              >
                 Create
               </Button>
             </div>
