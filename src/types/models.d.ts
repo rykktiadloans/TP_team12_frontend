@@ -13,6 +13,11 @@ export interface Model {
   id: number
 }
 
+export interface DamageScenarioConcernModel extends Model {
+  component: number
+  affected_CIA_parts: number
+}
+
 export interface TechnologyModel extends Model{
   name: string
   description: string
@@ -92,6 +97,7 @@ export interface DamageScenarioModel extends Model{
   operational_impact: number
   privacy_impact: number
   threat_scenarios: number[]
+  concerns: DamageScenarioConcernModel[]
   project: number | null
 }
 

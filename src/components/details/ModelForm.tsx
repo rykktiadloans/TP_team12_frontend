@@ -18,9 +18,15 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { AlertCircleIcon } from 'lucide-react'
 import {
   asNumber,
+  calculateAttackFeasibilityRating,
+  calculateImpactLevel,
   elapsedTimeOptions,
   equipmentOptions,
+  formatAttackFeasibilityRating,
+  formatAttackPotentialPoints,
   formatCIABinary,
+  formatCIAFlags,
+  formatImpactLevel,
   impactOptions,
   knowledgeOptions,
   specialistExpertiseOptions,
@@ -108,7 +114,7 @@ function CIABitmaskCheckboxGroup({
         )
       })}
       <p className="text-sm text-muted-foreground">
-        Stored value: {numericValue} ({formatCIABinary(numericValue)})
+        Selected: {formatCIAFlags(numericValue)} ({formatCIABinary(numericValue)})
       </p>
     </div>
   )
@@ -287,6 +293,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
 
   if (model.type == 'control') {
     const control = model.item as ControlModel
+    const attackFeasibilityRating = calculateAttackFeasibilityRating(control)
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.name = event.target.value
       setModel({ type: model.type, item: {...control} })
@@ -331,7 +338,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-et">Fr_et</FieldLabel>
+            <FieldLabel htmlFor="control-fr-et">Elapsed Time</FieldLabel>
             <OptionSelect
               id="control-fr-et"
               value={control.fr_et}
@@ -340,7 +347,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-se">Fr_se</FieldLabel>
+            <FieldLabel htmlFor="control-fr-se">Specialist Expertise</FieldLabel>
             <OptionSelect
               id="control-fr-se"
               value={control.fr_se}
@@ -349,7 +356,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-koc">Fr_koC</FieldLabel>
+            <FieldLabel htmlFor="control-fr-koc">Knowledge of Component</FieldLabel>
             <OptionSelect
               id="control-fr-koc"
               value={control.fr_koC}
@@ -358,7 +365,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-woo">Fr_WoO</FieldLabel>
+            <FieldLabel htmlFor="control-fr-woo">Window of Opportunity</FieldLabel>
             <OptionSelect
               id="control-fr-woo"
               value={control.fr_WoO}
@@ -367,13 +374,19 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-eq">Fr_eq</FieldLabel>
+            <FieldLabel htmlFor="control-fr-eq">Equipment</FieldLabel>
             <OptionSelect
               id="control-fr-eq"
               value={control.fr_eq}
               options={equipmentOptions}
               onChange={setFrEq}
             />
+          </Field>
+          <Field>
+            <FieldLabel>AFL</FieldLabel>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              {formatAttackFeasibilityRating(control)} | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} points
+            </div>
           </Field>
         </FieldGroup>
       </form>
@@ -418,6 +431,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
 
   if (model.type == 'attackStep') {
     const attackStep = model.item as AttackStepModel
+    const attackFeasibilityRating = calculateAttackFeasibilityRating(attackStep)
     const availablePreviousSteps = [...state.attackSteps.values()]
       .filter((step) => step.id !== attackStep.id)
       .map((step) => ({ id: step.id, label: step.name || `Attack Step ${step.id}` }))
@@ -528,7 +542,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="attack-step-fr-et">Fr_et</FieldLabel>
+            <FieldLabel htmlFor="attack-step-fr-et">Elapsed Time</FieldLabel>
             <OptionSelect
               id="attack-step-fr-et"
               value={attackStep.fr_et}
@@ -537,7 +551,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="attack-step-fr-se">Fr_se</FieldLabel>
+            <FieldLabel htmlFor="attack-step-fr-se">Specialist Expertise</FieldLabel>
             <OptionSelect
               id="attack-step-fr-se"
               value={attackStep.fr_se}
@@ -546,7 +560,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="attack-step-fr-koc">Fr_koC</FieldLabel>
+            <FieldLabel htmlFor="attack-step-fr-koc">Knowledge of Component</FieldLabel>
             <OptionSelect
               id="attack-step-fr-koc"
               value={attackStep.fr_koC}
@@ -555,7 +569,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="attack-step-fr-woo">Fr_WoO</FieldLabel>
+            <FieldLabel htmlFor="attack-step-fr-woo">Window of Opportunity</FieldLabel>
             <OptionSelect
               id="attack-step-fr-woo"
               value={attackStep.fr_WoO}
@@ -564,13 +578,19 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="attack-step-fr-eq">Fr_eq</FieldLabel>
+            <FieldLabel htmlFor="attack-step-fr-eq">Equipment</FieldLabel>
             <OptionSelect
               id="attack-step-fr-eq"
               value={attackStep.fr_eq}
               options={equipmentOptions}
               onChange={setFrEq}
             />
+          </Field>
+          <Field>
+            <FieldLabel>AFL</FieldLabel>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              {formatAttackFeasibilityRating(attackStep)} | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} points
+            </div>
           </Field>
         </FieldGroup>
       </form>
@@ -649,41 +669,76 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
 
   if (model.type == 'damageScenario') {
     const damageScenario = model.item as DamageScenarioModel
+    const linkedThreatScenarios = (damageScenario.threat_scenarios ?? [])
+      .map((id) => state.threatScenarios.get(id))
+      .filter(Boolean) as ThreatScenarioModel[]
+    const availableConcernComponents = [
+      ...new Set(linkedThreatScenarios.flatMap((scenario) => scenario.components ?? [])),
+    ]
+      .map((id) => state.components.get(id))
+      .filter(Boolean) as ComponentModel[]
+    const concernSummary = (concerns: DamageScenarioModel['concerns']) =>
+      concerns.reduce((summary, concern) => summary | concern.affected_CIA_parts, 0)
+    const setDamageScenario = (nextDamageScenario: DamageScenarioModel) => {
+      setModel({
+        type: model.type,
+        item: {
+          ...nextDamageScenario,
+          impact_scale: calculateImpactLevel(nextDamageScenario),
+          affected_CIA_parts: concernSummary(nextDamageScenario.concerns ?? []),
+        } as DamageScenarioModel,
+      })
+    }
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
-      damageScenario.name = event.target.value
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({ ...damageScenario, name: event.target.value })
     }
     const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
-      damageScenario.description = event.target.value
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({ ...damageScenario, description: event.target.value })
     }
-    const setAffectedCIAParts = (value: number) => {
-      damageScenario.affected_CIA_parts = value
-      setModel({ type: model.type, item: {...damageScenario} })
-    }
-    const setImpactScale: ChangeEventHandler<HTMLSelectElement> = (event) => {
-      damageScenario.impact_scale = asNumber(event.target.value)
-      setModel({ type: model.type, item: {...damageScenario} })
+    const setConcernCIAParts = (componentId: number, value: number) => {
+      const concerns = damageScenario.concerns ?? []
+      const existingConcern = concerns.find((concern) => concern.component === componentId)
+      const nextConcerns =
+        value === 0
+          ? concerns.filter((concern) => concern.component !== componentId)
+          : [
+              ...concerns.filter((concern) => concern.component !== componentId),
+              {
+                id: existingConcern?.id ?? -componentId,
+                component: componentId,
+                affected_CIA_parts: value,
+              },
+            ]
+
+      setDamageScenario({ ...damageScenario, concerns: nextConcerns })
     }
     const setSafetyImpact: ChangeEventHandler<HTMLSelectElement> = (event) => {
-      damageScenario.safety_impact = asNumber(event.target.value)
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({
+        ...damageScenario,
+        safety_impact: asNumber(event.target.value),
+      })
     }
     const setFinancialImpact: ChangeEventHandler<HTMLSelectElement> = (
       event
     ) => {
-      damageScenario.finantial_impact = asNumber(event.target.value)
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({
+        ...damageScenario,
+        finantial_impact: asNumber(event.target.value),
+      })
     }
     const setOperationalImpact: ChangeEventHandler<HTMLSelectElement> = (
       event
     ) => {
-      damageScenario.operational_impact = asNumber(event.target.value)
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({
+        ...damageScenario,
+        operational_impact: asNumber(event.target.value),
+      })
     }
     const setPrivacyImpact: ChangeEventHandler<HTMLSelectElement> = (event) => {
-      damageScenario.privacy_impact = asNumber(event.target.value)
-      setModel({ type: model.type, item: {...damageScenario} })
+      setDamageScenario({
+        ...damageScenario,
+        privacy_impact: asNumber(event.target.value),
+      })
     }
     return (
       <form>
@@ -705,25 +760,44 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="damage-scenario-parts">
-              Affected CIA Parts
-            </FieldLabel>
-            <CIABitmaskCheckboxGroup
-              idPrefix="damage-scenario-parts"
-              value={damageScenario.affected_CIA_parts}
-              onChange={setAffectedCIAParts}
-            />
+            <FieldLabel>Affected Components</FieldLabel>
+            {damageScenario.threat_scenarios?.length ? (
+              availableConcernComponents.length ? (
+                <div className="flex flex-col gap-4">
+                  {availableConcernComponents.map((component) => {
+                    const concern = (damageScenario.concerns ?? []).find(
+                      (item) => item.component === component.id
+                    )
+                    return (
+                      <div key={component.id} className="rounded-md border p-3">
+                        <div className="mb-3 text-sm font-medium">
+                          {component.name || `Component ${component.id}`}
+                        </div>
+                        <CIABitmaskCheckboxGroup
+                          idPrefix={`damage-scenario-concern-${component.id}`}
+                          value={concern?.affected_CIA_parts ?? 0}
+                          onChange={(value) => setConcernCIAParts(component.id, value)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Linked threat scenarios do not have involved components yet.
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Link a threat scenario before choosing affected components.
+              </p>
+            )}
           </Field>
           <Field>
-            <FieldLabel htmlFor="damage-scenario-scale">
-              Impact Scale
-            </FieldLabel>
-            <OptionSelect
-              id="damage-scenario-scale"
-              value={damageScenario.impact_scale}
-              options={impactOptions}
-              onChange={setImpactScale}
-            />
+            <FieldLabel>IL</FieldLabel>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              {formatImpactLevel(damageScenario)}
+            </div>
           </Field>
           <Field>
             <FieldLabel htmlFor="damage-scenario-safety">

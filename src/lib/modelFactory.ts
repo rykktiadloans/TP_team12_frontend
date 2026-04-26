@@ -92,6 +92,7 @@ export function createDefaultModel(type: ModelType): Model {
         operational_impact: 0,
         privacy_impact: 0,
         threat_scenarios: [],
+        concerns: [],
         project: null,
       } as DamageScenarioModel
     case 'compromise':

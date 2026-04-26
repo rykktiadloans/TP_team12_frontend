@@ -126,6 +126,7 @@ function toApiPayload(type: ModelType, model: Model) {
         operational_impact: damageScenario.operational_impact,
         privacy_impact: damageScenario.privacy_impact,
         threat_scenarios: damageScenario.threat_scenarios ?? [],
+        concerns: damageScenario.concerns ?? [],
         project_id: projectId,
       }
     }
@@ -208,6 +209,7 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         operational_impact: data.operational_impact ?? 0,
         privacy_impact: data.privacy_impact ?? 0,
         threat_scenarios: data.threat_scenarios ?? [],
+        concerns: data.concerns ?? [],
         project: data.project ?? null,
       } as DamageScenarioModel
     default:

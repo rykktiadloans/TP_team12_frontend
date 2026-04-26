@@ -23,6 +23,7 @@ export function DetailsWindow() {
   const storeSelectedId = useModelStore((store) => store.selectedId)
   const getItem = useModelStore((store) => store.getItem)
   const setItem = useModelStore((store) => store.setItem)
+  const saveItem = useModelStore((store) => store.saveItem)
   const setStoreSelectedId = useModelStore((store) => store.setSelectedId)
   const deleteItem = useModelStore((store) => store.deleteItem)
   const addItem = useModelStore((store) => store.addItem)
@@ -39,6 +40,16 @@ export function DetailsWindow() {
   const [creatorModel, setCreatorModel] = React.useState<Model>({ id: -1 })
   const [existingTargetId, setExistingTargetId] = React.useState('')
   const [creatorError, setCreatorError] = React.useState('')
+  const pendingSavesRef = React.useRef<
+    Record<
+      string,
+      {
+        timer: ReturnType<typeof setTimeout>
+        type: ModelType
+        item: Model
+      }
+    >
+  >({})
   const relatedCreateTypes = React.useMemo(
     () => (type ? getRelevantRelatedTypes(type) : []),
     [type]
@@ -183,6 +194,48 @@ export function DetailsWindow() {
     type,
   ])
 
+  const handleFormModelChange = React.useCallback(
+    (nextModel: { type: ModelType; item: Model }) => {
+      setItem(nextModel.type, nextModel.item)
+
+      if (nextModel.item.id < 0) {
+        return
+      }
+
+      const key = modelToId(nextModel.type, nextModel.item)
+      const currentSave = pendingSavesRef.current[key]
+      if (currentSave) {
+        clearTimeout(currentSave.timer)
+      }
+
+      pendingSavesRef.current[key] = {
+        type: nextModel.type,
+        item: nextModel.item,
+        timer: setTimeout(() => {
+          delete pendingSavesRef.current[key]
+          void saveItem(nextModel.type, nextModel.item).catch((error) => {
+            console.error(error)
+          })
+        }, 500),
+      }
+    },
+    [saveItem, setItem]
+  )
+
+  React.useEffect(() => {
+    const pendingSaves = pendingSavesRef.current
+
+    return () => {
+      Object.entries(pendingSaves).forEach(([key, pendingSave]) => {
+        clearTimeout(pendingSave.timer)
+        delete pendingSaves[key]
+        void saveItem(pendingSave.type, pendingSave.item).catch((error) => {
+          console.error(error)
+        })
+      })
+    }
+  }, [saveItem])
+
   const form = item ? (
     <>
       <ModelForm
@@ -190,7 +243,7 @@ export function DetailsWindow() {
           type: type,
           item: item,
         }}
-        setModel={(item) => setItem(type, item.item)}
+        setModel={handleFormModelChange}
       />
       <Button variant="destructive" onClick={onDelete}>
         Delete

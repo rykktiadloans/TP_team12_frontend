@@ -113,6 +113,7 @@ export async function getProjectState(
       operational_impact: scenario.operational_impact,
       privacy_impact: scenario.privacy_impact,
       threat_scenarios: scenario.threat_scenarios ?? [],
+      concerns: scenario.concerns ?? [],
       project: scenario.project ?? null,
     })
   )

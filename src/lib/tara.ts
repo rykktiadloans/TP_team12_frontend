@@ -60,6 +60,28 @@ export const ciaBitmaskOptions: Option[] = [
   { value: 7, label: 'Confidentiality + Integrity + Availability (111)' },
 ]
 
+export type AttackFeasibilityInput = {
+  fr_et: number
+  fr_se: number
+  fr_koC: number
+  fr_WoO: number
+  fr_eq: number
+}
+
+export type AttackFeasibilityRating = {
+  points: number
+  level: 'High' | 'Medium' | 'Low' | 'Very Low'
+  value: 1 | 2 | 3 | 4 | 5
+  attackPotential: 'Basic' | 'Enhanced-Basic' | 'Moderate' | 'High' | 'Beyond High'
+}
+
+export type ImpactLevelInput = {
+  safety_impact: number
+  finantial_impact: number
+  operational_impact: number
+  privacy_impact: number
+}
+
 export function asNumber(value: number | string | null | undefined, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string' && value.trim() !== '') {
@@ -86,4 +108,70 @@ export function formatCIABitmask(
   if (numeric & 1) labels.push('A')
 
   return labels.length ? `${labels.join('')} (${binary})` : `None (${binary})`
+}
+
+export function formatCIAFlags(value: number | string | null | undefined) {
+  const numeric = asNumber(value, 0)
+  const labels: string[] = []
+
+  if (numeric & 4) labels.push('C')
+  if (numeric & 2) labels.push('I')
+  if (numeric & 1) labels.push('A')
+
+  return labels.length ? labels.join('') : 'None'
+}
+
+export function calculateAttackPotentialPoints(row: AttackFeasibilityInput) {
+  if (row.fr_et >= 99 || row.fr_WoO >= 99) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  return row.fr_et + row.fr_se + row.fr_koC + row.fr_WoO + row.fr_eq
+}
+
+export function calculateAttackFeasibilityRating(
+  row: AttackFeasibilityInput
+): AttackFeasibilityRating {
+  const points = calculateAttackPotentialPoints(row)
+
+  if (points <= 9) {
+    return { points, level: 'High', value: 5, attackPotential: 'Basic' }
+  }
+
+  if (points <= 13) {
+    return { points, level: 'High', value: 4, attackPotential: 'Enhanced-Basic' }
+  }
+
+  if (points <= 19) {
+    return { points, level: 'Medium', value: 3, attackPotential: 'Moderate' }
+  }
+
+  if (points <= 24) {
+    return { points, level: 'Low', value: 2, attackPotential: 'High' }
+  }
+
+  return { points, level: 'Very Low', value: 1, attackPotential: 'Beyond High' }
+}
+
+export function formatAttackPotentialPoints(points: number) {
+  return Number.isFinite(points) ? String(points) : 'not practical'
+}
+
+export function formatAttackFeasibilityRating(row: AttackFeasibilityInput) {
+  const rating = calculateAttackFeasibilityRating(row)
+  return `${rating.level} (${rating.value})`
+}
+
+export function calculateImpactLevel(row: ImpactLevelInput) {
+  return Math.max(
+    asNumber(row.safety_impact),
+    asNumber(row.finantial_impact),
+    asNumber(row.operational_impact),
+    asNumber(row.privacy_impact)
+  )
+}
+
+export function formatImpactLevel(row: ImpactLevelInput) {
+  const value = calculateImpactLevel(row)
+  return `${impactOptions.find((option) => option.value === value)?.label ?? value} (${value})`
 }

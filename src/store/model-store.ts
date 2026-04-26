@@ -57,6 +57,7 @@ export interface ModelStore {
   // existing model store API
   getItem: (id: string) => Model | null
   setItem: (type: ModelType, model: Model) => void
+  saveItem: (type: ModelType, model: Model) => Promise<Model>
   addItem: (type: ModelType, model: Model) => Promise<Model>
   deleteItem: (id: string) => Promise<void>
   isConnectable: (
@@ -111,6 +112,21 @@ function getCurrentProjectId(model?: Model) {
 
   const projectId = sessionStorage.getItem('projectId')
   return projectId ? Number(projectId) : null
+}
+
+async function reloadProjectStateAfterRelationshipUpdate(
+  get: () => ModelStore,
+  type: ModelType,
+  model?: Model
+) {
+  if (type !== 'threatScenario' && type !== 'damageScenario') {
+    return
+  }
+
+  const projectId = getCurrentProjectId(model)
+  if (projectId != null) {
+    await get().loadProjectState(projectId)
+  }
 }
 
 function resolveConnectionDirection(
@@ -370,6 +386,27 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     set({ state: { ...state } })
   },
 
+  saveItem: async (type: ModelType, model: Model) => {
+    if (!supportsApiUpdateType(type)) {
+      get().setItem(type, model)
+      return model
+    }
+
+    const savedModel = await updateModel(type, model)
+    const state = get().state
+    const map = getMapForType(state, type)
+    const currentModel = map.get(savedModel.id)
+
+    if (JSON.stringify(currentModel) === JSON.stringify(model)) {
+      map.set(savedModel.id, savedModel)
+      set({ state: { ...state } })
+    }
+
+    await reloadProjectStateAfterRelationshipUpdate(get, type, savedModel)
+    refreshTreeIfLoaded(get)
+    return savedModel
+  },
+
   addItem: async (type: ModelType, model: Model) => {
     const state = get().state
     const map = getMapForType(state, type)
@@ -498,7 +535,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       if (supportsApiUpdateType(resolved.sourceType)) {
         const savedModel = await updateModel(resolved.sourceType, source)
         map.set(savedModel.id, savedModel as any)
+        set({ state: { ...state } })
+        await reloadProjectStateAfterRelationshipUpdate(
+          get,
+          resolved.sourceType,
+          savedModel
+        )
         refreshTreeIfLoaded(get)
+        return
       } else {
         map.set(resolved.sourceId, source)
       }
@@ -509,7 +553,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     if (supportsApiUpdateType(resolved.sourceType)) {
       const savedModel = await updateModel(resolved.sourceType, source)
       map.set(savedModel.id, savedModel as any)
+      set({ state: { ...state } })
+      await reloadProjectStateAfterRelationshipUpdate(
+        get,
+        resolved.sourceType,
+        savedModel
+      )
       refreshTreeIfLoaded(get)
+      return
     } else {
       map.set(resolved.sourceId, source)
     }
@@ -541,7 +592,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       if (supportsApiUpdateType(resolved.sourceType)) {
         const savedModel = await updateModel(resolved.sourceType, source)
         map.set(savedModel.id, savedModel as any)
+        set({ state: { ...state } })
+        await reloadProjectStateAfterRelationshipUpdate(
+          get,
+          resolved.sourceType,
+          savedModel
+        )
         refreshTreeIfLoaded(get)
+        return
       } else {
         map.set(resolved.sourceId, source)
       }
@@ -558,7 +616,14 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     if (supportsApiUpdateType(resolved.sourceType)) {
       const savedModel = await updateModel(resolved.sourceType, source)
       map.set(savedModel.id, savedModel as any)
+      set({ state: { ...state } })
+      await reloadProjectStateAfterRelationshipUpdate(
+        get,
+        resolved.sourceType,
+        savedModel
+      )
       refreshTreeIfLoaded(get)
+      return
     } else {
       map.set(resolved.sourceId, source)
     }
