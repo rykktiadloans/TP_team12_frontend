@@ -114,6 +114,8 @@ export async function getProjectState(
       privacy_impact: scenario.privacy_impact,
       threat_scenarios: scenario.threat_scenarios ?? [],
       concerns: scenario.concerns ?? [],
+      il: scenario.il ?? 0,
+      il_label: scenario.il_label ?? 'Negligible',
       project: scenario.project ?? null,
     })
   )
@@ -126,6 +128,10 @@ export async function getProjectState(
       ...control,
       description: control.description ?? '',
       attack_steps: (control as ControlModel & { attack_steps?: number[] }).attack_steps ?? [],
+      attack_potential_points: control.attack_potential_points ?? null,
+      attack_potential: control.attack_potential ?? null,
+      afl: control.afl ?? null,
+      afl_value: control.afl_value ?? null,
     })),
     threatClasses: [],
     attackSteps: attackSteps.map((step) => ({
@@ -133,6 +139,10 @@ export async function getProjectState(
       description: step.description ?? '',
       required_access: step.required_access ?? '',
       previous_steps: step.previous_steps ?? [],
+      attack_potential_points: step.attack_potential_points ?? null,
+      attack_potential: step.attack_potential ?? null,
+      afl: step.afl ?? null,
+      afl_value: step.afl_value ?? null,
     })),
     threatScenarios,
     damageScenarios,

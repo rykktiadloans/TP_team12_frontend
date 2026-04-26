@@ -14,7 +14,6 @@ import { useSelectedItem } from '@/context/SelectedItemContext'
 import {
   modelToId,
   useModelStore,
-  type ModelState,
 } from '@/store/model-store'
 import type {
   AttackStepModel,
@@ -27,12 +26,7 @@ import { taraTableItems, type TaraTableKey } from '@/lib/taraTables'
 import {
   elapsedTimeOptions,
   equipmentOptions,
-  calculateAttackFeasibilityRating,
-  calculateImpactLevel,
-  formatAttackFeasibilityRating,
-  formatAttackPotentialPoints,
   formatCIAFlags,
-  formatImpactLevel,
   impactOptions,
   knowledgeOptions,
   specialistExpertiseOptions,
@@ -51,17 +45,6 @@ type Column<T> = {
   render: (..._args: [T]) => ReactNode
 }
 
-type RiskRow = {
-  id: string
-  title: string
-  threatScenarioId: number
-  damageScenarioId: number
-  concernComponentId: number | null
-  affectedCIA: number
-  impactLevel: number
-  component: string
-}
-
 const creatableTableTypes: Partial<Record<TaraTableKey, ModelType>> = {
   threatScenarios: 'threatScenario',
   damageScenarios: 'damageScenario',
@@ -75,6 +58,18 @@ function optionLabel(options: Option[], value: number) {
 
 function scoreText(options: Option[], value: number) {
   return `${optionLabel(options, value)} (${value})`
+}
+
+function ratingText(label?: string | null, value?: number | null) {
+  if (!label) {
+    return 'unknown'
+  }
+
+  return value == null ? label : `${label} (${value})`
+}
+
+function attackPotentialPointsText(value?: number | null) {
+  return value == null ? 'not practical' : String(value)
 }
 
 function modelNames(ids: number[] | undefined, map: Map<number, Model>) {
@@ -145,13 +140,11 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function AttackFeasibilityDetails({ row }: { row: AttackStepModel | ControlModel }) {
-  const rating = calculateAttackFeasibilityRating(row)
-
   return (
     <DetailGrid>
-      <DetailItem label="AFL" value={formatAttackFeasibilityRating(row)} />
-      <DetailItem label="Attack Potential" value={rating.attackPotential} />
-      <DetailItem label="Attack Potential Points" value={formatAttackPotentialPoints(rating.points)} />
+      <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
+      <DetailItem label="Attack Potential" value={row.attack_potential ?? 'unknown'} />
+      <DetailItem label="Attack Potential Points" value={attackPotentialPointsText(row.attack_potential_points)} />
       <DetailItem label="Elapsed Time" value={scoreText(elapsedTimeOptions, row.fr_et)} />
       <DetailItem label="Specialist Expertise" value={scoreText(specialistExpertiseOptions, row.fr_se)} />
       <DetailItem label="Knowledge of Component" value={scoreText(knowledgeOptions, row.fr_koC)} />
@@ -168,46 +161,18 @@ function ImpactDetails({ row }: { row: {
   finantial_impact: number
   operational_impact: number
   privacy_impact: number
+  il?: number
+  il_label?: string
 } }) {
   return (
     <DetailGrid>
       <DetailItem label="Affected CIA" value={formatCIAFlags(row.affected_CIA_parts)} />
-      <DetailItem label="IL" value={formatImpactLevel(row)} />
+      <DetailItem label="IL" value={ratingText(row.il_label, row.il)} />
       <DetailItem label="Safety" value={scoreText(impactOptions, row.safety_impact)} />
       <DetailItem label="Financial" value={scoreText(impactOptions, row.finantial_impact)} />
       <DetailItem label="Operational" value={scoreText(impactOptions, row.operational_impact)} />
       <DetailItem label="Privacy" value={scoreText(impactOptions, row.privacy_impact)} />
     </DetailGrid>
-  )
-}
-
-function riskRows(state: ModelState): RiskRow[] {
-  return [...state.threatScenarios.values()].flatMap((threatScenario) =>
-    (threatScenario.damage_scenarios ?? []).flatMap((damageScenarioId) => {
-      const damageScenario = state.damageScenarios.get(damageScenarioId)
-      const damageName = damageScenario ? damageScenario.name : `DS.${damageScenarioId}`
-      const concerns = damageScenario?.concerns?.length
-        ? damageScenario.concerns
-        : [{ id: -1, component: null, affected_CIA_parts: damageScenario?.affected_CIA_parts ?? 0 }]
-
-      return concerns.map((concern) => {
-        const componentName =
-          concern.component == null
-            ? 'none'
-            : modelName(concern.component, state.components as Map<number, Model>)
-        const affectedCIA = concern.affected_CIA_parts ?? 0
-        return {
-          id: `${threatScenario.id}-${damageScenarioId}-${concern.component ?? 'none'}-${affectedCIA}`,
-          title: `${threatScenario.name} / ${damageName} / ${componentName} ${formatCIAFlags(affectedCIA)}`,
-          threatScenarioId: threatScenario.id,
-          damageScenarioId,
-          concernComponentId: concern.component,
-          affectedCIA,
-          impactLevel: damageScenario ? calculateImpactLevel(damageScenario) : 0,
-          component: componentName,
-        }
-      })
-    })
   )
 }
 
@@ -322,6 +287,7 @@ function tableTitle(activeTable: TaraTableKey) {
 
 export function TableViewWindow({ activeTable }: TableViewWindowProps) {
   const state = useModelStore((store) => store.state)
+  const risks = useModelStore((store) => store.risks)
   const title = tableTitle(activeTable)
   const creatableType = creatableTableTypes[activeTable]
 
@@ -401,7 +367,7 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
           {
             key: 'impact',
             label: 'IL',
-            render: formatImpactLevel,
+            render: (row) => ratingText(row.il_label, row.il),
           },
           {
             key: 'cia',
@@ -445,7 +411,7 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
             label: 'Threatens',
             render: (row) => modelNames(row.threat_scenarios, state.threatScenarios as Map<number, Model>),
           },
-          { key: 'afl', label: 'AFL', render: formatAttackFeasibilityRating },
+          { key: 'afl', label: 'AFL', render: (row) => ratingText(row.afl, row.afl_value) },
         ]}
       />
     ) : (
@@ -478,7 +444,7 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
             label: 'Mitigates',
             render: (row) => modelNames(row.attack_steps, state.attackSteps as Map<number, Model>),
           },
-          { key: 'afl', label: 'AFL', render: formatAttackFeasibilityRating },
+          { key: 'afl', label: 'AFL', render: (row) => ratingText(row.afl, row.afl_value) },
         ]}
       />
     ) : (
@@ -491,33 +457,35 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
   }
 
   if (activeTable === 'risks') {
-    const rows = riskRows(state)
+    const rows = risks
     content = rows.length ? (
       <DataTable
         rows={rows}
         getRowId={(row) => row.id}
-        getSelectId={(row) => modelToId('threatScenario', state.threatScenarios.get(row.threatScenarioId) as ThreatScenarioModel)}
+        getSelectId={(row) => {
+          const threatScenario = state.threatScenarios.get(row.threat_scenario)
+          return threatScenario ? modelToId('threatScenario', threatScenario as ThreatScenarioModel) : ''
+        }}
         renderExpanded={(row) => {
-          const threatScenario = state.threatScenarios.get(row.threatScenarioId)
-          const damageScenario = state.damageScenarios.get(row.damageScenarioId)
+          const threatScenario = state.threatScenarios.get(row.threat_scenario)
+          const damageScenario = state.damageScenarios.get(row.damage_scenario)
 
           return (
             <DetailBlock description={threatScenario?.description}>
               <DetailGrid>
                 <DetailItem
                   label="Threat Scenario"
-                  value={threatScenario?.name ?? `TS.${row.threatScenarioId}`}
+                  value={row.threat_scenario_name ?? threatScenario?.name ?? `TS.${row.threat_scenario}`}
                 />
                 <DetailItem
                   label="Damage Scenario"
-                  value={damageScenario?.name ?? `DS.${row.damageScenarioId}`}
+                  value={row.damage_scenario_name ?? damageScenario?.name ?? `DS.${row.damage_scenario}`}
                 />
-                <DetailItem
-                  label="IL"
-                  value={scoreText(impactOptions, row.impactLevel)}
-                />
-                <DetailItem label="Affected Component" value={row.component} />
-                <DetailItem label="Affected CIA" value={formatCIAFlags(row.affectedCIA)} />
+                <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
+                <DetailItem label="IL" value={ratingText(row.il_label, row.il)} />
+                <DetailItem label="RL" value={row.rl ?? 'unknown'} />
+                <DetailItem label="Affected Component" value={row.component_name ?? 'none'} />
+                <DetailItem label="Affected CIA" value={formatCIAFlags(row.affected_CIA_parts)} />
               </DetailGrid>
             </DetailBlock>
           )
@@ -525,13 +493,15 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
         columns={[
           { key: 'id', label: 'ID', render: (row) => `R.${row.id}` },
           { key: 'title', label: 'Risk', render: (row) => row.title },
+          { key: 'afl', label: 'AFL', render: (row) => ratingText(row.afl, row.afl_value) },
           {
             key: 'impact',
             label: 'IL',
-            render: (row) => scoreText(impactOptions, row.impactLevel),
+            render: (row) => ratingText(row.il_label, row.il),
           },
-          { key: 'component', label: 'Affected Component', render: (row) => row.component },
-          { key: 'cia', label: 'CIA', render: (row) => formatCIAFlags(row.affectedCIA) },
+          { key: 'rl', label: 'RL', render: (row) => row.rl ?? 'unknown' },
+          { key: 'component', label: 'Affected Component', render: (row) => row.component_name ?? 'none' },
+          { key: 'cia', label: 'CIA', render: (row) => formatCIAFlags(row.affected_CIA_parts) },
         ]}
       />
     ) : (

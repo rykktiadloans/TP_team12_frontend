@@ -50,6 +50,10 @@ export interface ControlModel extends Model {
   fr_eq: number
   component: number | null
   attack_steps: number[]
+  attack_potential_points?: number | null
+  attack_potential?: string | null
+  afl?: string | null
+  afl_value?: number | null
   project: number | null
 }
 
@@ -73,6 +77,10 @@ export interface AttackStepModel extends Model{
   previous_steps: number[]
   threat_scenarios: number[]
   threat_class: number | null
+  attack_potential_points?: number | null
+  attack_potential?: string | null
+  afl?: string | null
+  afl_value?: number | null
   project: number | null
 }
 
@@ -98,6 +106,8 @@ export interface DamageScenarioModel extends Model{
   privacy_impact: number
   threat_scenarios: number[]
   concerns: DamageScenarioConcernModel[]
+  il?: number
+  il_label?: string
   project: number | null
 }
 
@@ -106,4 +116,24 @@ export interface CompromisesModel extends Model{
   component: number | null
   threat_scenario: number | null
   project: number | null
+}
+
+export interface GeneratedRiskModel {
+  id: string
+  title: string
+  threat_scenario: number
+  threat_scenario_name: string
+  damage_scenario: number
+  damage_scenario_name: string
+  concern: number | null
+  component: number | null
+  component_name: string | null
+  affected_CIA_parts: number
+  attack_potential_points: number | null
+  attack_potential: string | null
+  afl: string | null
+  afl_value: number | null
+  il: number
+  il_label: string
+  rl: number | null
 }

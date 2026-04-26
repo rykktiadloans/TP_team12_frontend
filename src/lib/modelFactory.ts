@@ -46,6 +46,10 @@ export function createDefaultModel(type: ModelType): Model {
         fr_eq: 0,
         component: null,
         attack_steps: [],
+        attack_potential_points: null,
+        attack_potential: null,
+        afl: null,
+        afl_value: null,
         project: null,
       } as ControlModel
     case 'threatClass':
@@ -66,6 +70,10 @@ export function createDefaultModel(type: ModelType): Model {
         previous_steps: [],
         threat_scenarios: [],
         threat_class: null,
+        attack_potential_points: null,
+        attack_potential: null,
+        afl: null,
+        afl_value: null,
         project: null,
       } as AttackStepModel
     case 'threatScenario':
@@ -93,6 +101,8 @@ export function createDefaultModel(type: ModelType): Model {
         privacy_impact: 0,
         threat_scenarios: [],
         concerns: [],
+        il: 0,
+        il_label: 'Negligible',
         project: null,
       } as DamageScenarioModel
     case 'compromise':

@@ -165,6 +165,10 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         fr_eq: data.fr_eq ?? 0,
         component: data.component ?? null,
         attack_steps: data.attack_steps ?? [],
+        attack_potential_points: data.attack_potential_points ?? null,
+        attack_potential: data.attack_potential ?? null,
+        afl: data.afl ?? null,
+        afl_value: data.afl_value ?? null,
         project: data.project ?? null,
       } as ControlModel
     case 'attackStep':
@@ -183,6 +187,10 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         previous_steps: data.previous_steps ?? [],
         threat_scenarios: data.threat_scenarios ?? [],
         threat_class: data.threat_class ?? null,
+        attack_potential_points: data.attack_potential_points ?? null,
+        attack_potential: data.attack_potential ?? null,
+        afl: data.afl ?? null,
+        afl_value: data.afl_value ?? null,
         project: data.project ?? null,
       } as AttackStepModel
     case 'threatScenario':
@@ -210,6 +218,8 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         privacy_impact: data.privacy_impact ?? 0,
         threat_scenarios: data.threat_scenarios ?? [],
         concerns: data.concerns ?? [],
+        il: data.il ?? 0,
+        il_label: data.il_label ?? 'Negligible',
         project: data.project ?? null,
       } as DamageScenarioModel
     default:

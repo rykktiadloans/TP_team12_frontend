@@ -10,11 +10,13 @@ import type {
   TechnologyModel,
   ThreatClassModel,
   ThreatScenarioModel,
+  GeneratedRiskModel,
 } from '@/types/models'
 
 import { create } from 'zustand'
 import { getProjectTree, type TreeNode } from '@/lib/GetProjectTree'
 import { getProjectState } from '@/lib/getProjectState'
+import { getProjectRisks } from '@/lib/getProjectRisks'
 import {
   createModel,
   deleteModel as deleteApiModel,
@@ -46,8 +48,12 @@ export interface ModelStore {
   selectedId: string
   focusTargetId: string
   treeProjectId: string | number | null
+  risks: GeneratedRiskModel[]
+  risksLoading: boolean
+  risksError: string
 
   loadProjectState: (projectId: string | number) => Promise<void>
+  loadRisks: (projectId: string | number) => Promise<void>
   loadTree: (projectId: string | number) => Promise<void>
   setSelectedId: (id: string) => void
   requestFocus: (id: string) => void
@@ -119,7 +125,11 @@ async function reloadProjectStateAfterRelationshipUpdate(
   type: ModelType,
   model?: Model
 ) {
-  if (type !== 'threatScenario' && type !== 'damageScenario') {
+  if (
+    type !== 'threatScenario' &&
+    type !== 'damageScenario' &&
+    type !== 'attackStep'
+  ) {
     return
   }
 
@@ -223,12 +233,19 @@ export const useModelStore = create<ModelStore>((set, get) => ({
   selectedId: '',
   focusTargetId: '',
   treeProjectId: null,
+  risks: [],
+  risksLoading: false,
+  risksError: '',
 
   loadProjectState: async (projectId: string | number) => {
     try {
-      const projectState = await getProjectState(projectId)
+      const [projectState, risks] = await Promise.all([
+        getProjectState(projectId),
+        getProjectRisks(projectId),
+      ])
 
       set({
+        risks,
         state: {
           technologies: new Map(
             projectState.technologies.map((item) => [item.id, item])
@@ -259,7 +276,23 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       })
     } catch (error) {
       console.error(error)
-      set({ state: createEmptyState() })
+      set({ state: createEmptyState(), risks: [] })
+    }
+  },
+
+  loadRisks: async (projectId: string | number) => {
+    set({ risksLoading: true, risksError: '' })
+
+    try {
+      const risks = await getProjectRisks(projectId)
+      set({ risks, risksLoading: false })
+    } catch (error) {
+      console.error(error)
+      set({
+        risks: [],
+        risksLoading: false,
+        risksError: 'Risks could not be loaded',
+      })
     }
   },
 
@@ -307,6 +340,9 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       selectedId: '',
       focusTargetId: '',
       treeProjectId: null,
+      risks: [],
+      risksLoading: false,
+      risksError: '',
     })
   },
 

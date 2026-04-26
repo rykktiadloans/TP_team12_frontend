@@ -15,16 +15,14 @@ export function TableNavigationWindow({
   onActiveTableChange,
 }: TableNavigationWindowProps) {
   const state = useModelStore((store) => store.state)
+  const risks = useModelStore((store) => store.risks)
   const counts: Record<TaraTableKey, number> = {
     threatScenarios: state.threatScenarios.size,
     damageScenarios: state.damageScenarios.size,
     attackSteps: state.attackSteps.size,
     controls: state.controls.size,
     controlScenarios: 0,
-    risks: [...state.threatScenarios.values()].reduce(
-      (total, scenario) => total + (scenario.damage_scenarios?.length ?? 0),
-      0
-    ),
+    risks: risks.length,
   }
 
   return (
