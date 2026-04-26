@@ -1,6 +1,7 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { NewModelButton } from '@/components/new-model/NewModelButton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
@@ -18,19 +19,26 @@ import {
 import type {
   AttackStepModel,
   ControlModel,
+  CybersecurityGoalModel,
+  GeneratedRiskModel,
   Model,
   ModelType,
   ThreatScenarioModel,
 } from '@/types/models'
 import { taraTableItems, type TaraTableKey } from '@/lib/taraTables'
+import { setRiskTreatment, TREATMENT_LABELS, type TreatmentDecision } from '@/lib/riskTreatmentApi'
 import {
+  calculateEffectiveAttackFeasibilityRating,
+  calculateRiskLevel,
   elapsedTimeOptions,
   equipmentOptions,
+  formatAttackPotentialPoints,
   formatCIAFlags,
   impactOptions,
   knowledgeOptions,
   specialistExpertiseOptions,
   windowOfOpportunityOptions,
+  type AttackFeasibilityRating,
   type Option,
 } from '@/lib/tara'
 import { getName } from './MainCardsWindow'
@@ -50,6 +58,7 @@ const creatableTableTypes: Partial<Record<TaraTableKey, ModelType>> = {
   damageScenarios: 'damageScenario',
   attackSteps: 'attackStep',
   controls: 'control',
+  cybersecurityGoals: 'cybersecurityGoal',
 }
 
 function optionLabel(options: Option[], value: number) {
@@ -139,12 +148,50 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
-function AttackFeasibilityDetails({ row }: { row: AttackStepModel | ControlModel }) {
+function AttackFeasibilityDetails({
+  row,
+  activeControls,
+}: {
+  row: AttackStepModel | ControlModel
+  activeControls?: ControlModel[]
+}) {
+  const isAttackStep = 'previous_steps' in row
+  const effective =
+    isAttackStep && activeControls
+      ? calculateEffectiveAttackFeasibilityRating(
+          { ...row, id: row.id },
+          activeControls
+        )
+      : null
+  const hasEffect =
+    effective != null &&
+    (effective.points !== (row.attack_potential_points ?? effective.points) ||
+      effective.level !== row.afl)
+
   return (
     <DetailGrid>
-      <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
-      <DetailItem label="Attack Potential" value={row.attack_potential ?? 'unknown'} />
-      <DetailItem label="Attack Potential Points" value={attackPotentialPointsText(row.attack_potential_points)} />
+      {effective && hasEffect ? (
+        <>
+          <DetailItem
+            label="AFL (with controls)"
+            value={`${effective.level} (${effective.value})`}
+          />
+          <DetailItem label="Attack Potential (with controls)" value={effective.attackPotential} />
+          <DetailItem
+            label="Attack Potential Points (with controls)"
+            value={formatAttackPotentialPoints(effective.points)}
+          />
+          <DetailItem label="AFL (base)" value={ratingText(row.afl, row.afl_value)} />
+          <DetailItem label="Attack Potential (base)" value={row.attack_potential ?? 'unknown'} />
+          <DetailItem label="Points (base)" value={attackPotentialPointsText(row.attack_potential_points)} />
+        </>
+      ) : (
+        <>
+          <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
+          <DetailItem label="Attack Potential" value={row.attack_potential ?? 'unknown'} />
+          <DetailItem label="Attack Potential Points" value={attackPotentialPointsText(row.attack_potential_points)} />
+        </>
+      )}
       <DetailItem label="Elapsed Time" value={scoreText(elapsedTimeOptions, row.fr_et)} />
       <DetailItem label="Specialist Expertise" value={scoreText(specialistExpertiseOptions, row.fr_se)} />
       <DetailItem label="Knowledge of Component" value={scoreText(knowledgeOptions, row.fr_koC)} />
@@ -156,7 +203,6 @@ function AttackFeasibilityDetails({ row }: { row: AttackStepModel | ControlModel
 
 function ImpactDetails({ row }: { row: {
   affected_CIA_parts: number
-  impact_scale: number
   safety_impact: number
   finantial_impact: number
   operational_impact: number
@@ -189,18 +235,6 @@ function EmptyTable({ label }: { label: string }) {
   )
 }
 
-function UnmodeledTable({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-[220px] items-center justify-center rounded-md border border-dashed px-6 text-center">
-      <div>
-        <div className="text-sm font-medium">{label} is not modeled yet.</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          The table tab is ready, but the backend does not have a dedicated entity for it yet.
-        </div>
-      </div>
-    </div>
-  )
-}
 
 interface DataTableProps<T> {
   rows: T[]
@@ -281,13 +315,86 @@ function DataTable<T>({
   )
 }
 
+function RiskTreatmentEditor({ row }: { row: GeneratedRiskModel }) {
+  const loadRisks = useModelStore((s) => s.loadRisks)
+  const [decision, setDecision] = useState<TreatmentDecision>(
+    (row.treatment_decision as TreatmentDecision) ?? ''
+  )
+  const [rationale, setRationale] = useState(row.treatment_rationale ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    const projectIdStr = sessionStorage.getItem('projectId')
+    if (!projectIdStr) return
+    setSaving(true)
+    try {
+      await setRiskTreatment(Number(projectIdStr), row.threat_scenario, row.damage_scenario, decision, rationale)
+      await loadRisks(Number(projectIdStr))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 pt-1">
+      <div className="text-xs font-medium uppercase text-muted-foreground">Risk Treatment (Clause 15.8)</div>
+      <div className="flex items-center gap-2">
+        <select
+          value={decision}
+          onChange={(e) => setDecision(e.target.value as TreatmentDecision)}
+          className="flex h-8 rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-xs outline-none"
+        >
+          <option value="">— Not set —</option>
+          {Object.entries(TREATMENT_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>{label}</option>
+          ))}
+        </select>
+        <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+      <textarea
+        value={rationale}
+        onChange={(e) => setRationale(e.target.value)}
+        placeholder="Rationale (optional)…"
+        rows={2}
+        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none resize-none"
+      />
+    </div>
+  )
+}
+
 function tableTitle(activeTable: TaraTableKey) {
   return taraTableItems.find((item) => item.key === activeTable)?.label ?? 'TABLE'
+}
+
+function getEffectiveAflForTS(
+  tsId: number,
+  threatScenarios: Map<number, ThreatScenarioModel>,
+  attackSteps: Map<number, AttackStepModel>,
+  activeControls: ControlModel[]
+): AttackFeasibilityRating | null {
+  const ts = threatScenarios.get(tsId)
+  if (!ts?.attack_steps?.length) return null
+
+  const ratings = (ts.attack_steps as number[])
+    .map((id) => attackSteps.get(id))
+    .filter((s): s is AttackStepModel => s != null)
+    .map((s) => calculateEffectiveAttackFeasibilityRating({ ...s, id: s.id }, activeControls))
+
+  if (!ratings.length) return null
+  return ratings.reduce((best, curr) => (curr.value > best.value ? curr : best))
 }
 
 export function TableViewWindow({ activeTable }: TableViewWindowProps) {
   const state = useModelStore((store) => store.state)
   const risks = useModelStore((store) => store.risks)
+  const getActiveControlIds = useModelStore((store) => store.getActiveControlIds)
+  useModelStore((store) => store.activeControlGroupId) // re-render when group changes
+  const activeControlIds = getActiveControlIds()
+  const activeControls = Array.from(state.controls.values()).filter((c) =>
+    activeControlIds.includes(c.id)
+  )
   const title = tableTitle(activeTable)
   const creatableType = creatableTableTypes[activeTable]
 
@@ -395,7 +502,7 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
         getSelectId={(row) => modelToId('attackStep', row)}
         renderExpanded={(row) => (
           <DetailBlock description={row.description}>
-            <AttackFeasibilityDetails row={row} />
+            <AttackFeasibilityDetails row={row} activeControls={activeControls} />
           </DetailBlock>
         )}
         columns={[
@@ -411,7 +518,21 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
             label: 'Threatens',
             render: (row) => modelNames(row.threat_scenarios, state.threatScenarios as Map<number, Model>),
           },
-          { key: 'afl', label: 'AFL', render: (row) => ratingText(row.afl, row.afl_value) },
+          {
+            key: 'afl',
+            label: 'AFL',
+            render: (row) => {
+              const effective = calculateEffectiveAttackFeasibilityRating(
+                { ...row, id: row.id },
+                activeControls
+              )
+              const base = ratingText(row.afl, row.afl_value)
+              if (effective.level !== row.afl || effective.value !== row.afl_value) {
+                return `${effective.level} (${effective.value}) ← ${base}`
+              }
+              return base
+            },
+          },
         ]}
       />
     ) : (
@@ -452,8 +573,58 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
     )
   }
 
-  if (activeTable === 'controlScenarios') {
-    content = <UnmodeledTable label={title} />
+  if (activeTable === 'cybersecurityGoals') {
+    const rows = [...state.cybersecurityGoals.values()]
+    const CAL_LABELS: Record<number, string> = { 1: 'CAL 1', 2: 'CAL 2', 3: 'CAL 3', 4: 'CAL 4' }
+    content = rows.length ? (
+      <DataTable
+        rows={rows}
+        getRowId={(row) => String(row.id)}
+        getSelectId={(row) => modelToId('cybersecurityGoal', row as unknown as Model)}
+        renderExpanded={(row: CybersecurityGoalModel) => (
+          <DetailBlock description={row.description}>
+            <DetailGrid>
+              <DetailItem
+                label="CAL"
+                value={row.cal != null ? CAL_LABELS[row.cal] ?? `CAL ${row.cal}` : 'Not set'}
+              />
+              <DetailItem
+                label="Damage Scenarios"
+                value={modelNames(row.damage_scenarios, state.damageScenarios as Map<number, Model>)}
+              />
+              <DetailItem
+                label="Controls"
+                value={modelNames(row.controls, state.controls as Map<number, Model>)}
+              />
+            </DetailGrid>
+          </DetailBlock>
+        )}
+        columns={[
+          { key: 'id', label: 'ID', render: (row: CybersecurityGoalModel) => `CG.${row.id}` },
+          { key: 'name', label: 'Cybersecurity Goal', render: (row: CybersecurityGoalModel) => row.name },
+          {
+            key: 'cal',
+            label: 'CAL',
+            render: (row: CybersecurityGoalModel) =>
+              row.cal != null ? CAL_LABELS[row.cal] ?? `CAL ${row.cal}` : '—',
+          },
+          {
+            key: 'damage_scenarios',
+            label: 'Damage Scenarios',
+            render: (row: CybersecurityGoalModel) =>
+              modelNames(row.damage_scenarios, state.damageScenarios as Map<number, Model>),
+          },
+          {
+            key: 'controls',
+            label: 'Controls',
+            render: (row: CybersecurityGoalModel) =>
+              modelNames(row.controls, state.controls as Map<number, Model>),
+          },
+        ]}
+      />
+    ) : (
+      <EmptyTable label={title} />
+    )
   }
 
   if (activeTable === 'risks') {
@@ -469,6 +640,18 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
         renderExpanded={(row) => {
           const threatScenario = state.threatScenarios.get(row.threat_scenario)
           const damageScenario = state.damageScenarios.get(row.damage_scenario)
+          const effectiveAfl = getEffectiveAflForTS(
+            row.threat_scenario,
+            state.threatScenarios,
+            state.attackSteps,
+            activeControls
+          )
+          const effectiveRl =
+            effectiveAfl != null && row.il != null
+              ? calculateRiskLevel(row.il, effectiveAfl.value)
+              : null
+          const aflChanged = effectiveAfl != null && effectiveAfl.value !== row.afl_value
+          const rlChanged = effectiveRl != null && effectiveRl !== row.rl
 
           return (
             <DetailBlock description={threatScenario?.description}>
@@ -481,27 +664,85 @@ export function TableViewWindow({ activeTable }: TableViewWindowProps) {
                   label="Damage Scenario"
                   value={row.damage_scenario_name ?? damageScenario?.name ?? `DS.${row.damage_scenario}`}
                 />
-                <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
+                {aflChanged && effectiveAfl ? (
+                  <>
+                    <DetailItem label="AFL (with controls)" value={`${effectiveAfl.level} (${effectiveAfl.value})`} />
+                    <DetailItem label="AFL (base)" value={ratingText(row.afl, row.afl_value)} />
+                  </>
+                ) : (
+                  <DetailItem label="AFL" value={ratingText(row.afl, row.afl_value)} />
+                )}
                 <DetailItem label="IL" value={ratingText(row.il_label, row.il)} />
-                <DetailItem label="RL" value={row.rl ?? 'unknown'} />
+                <DetailItem label="Safety (S)" value={scoreText(impactOptions, row.safety_impact)} />
+                <DetailItem label="Financial (F)" value={scoreText(impactOptions, row.finantial_impact)} />
+                <DetailItem label="Operational (O)" value={scoreText(impactOptions, row.operational_impact)} />
+                <DetailItem label="Privacy (P)" value={scoreText(impactOptions, row.privacy_impact)} />
+                {rlChanged ? (
+                  <>
+                    <DetailItem label="RL (with controls)" value={effectiveRl} />
+                    <DetailItem label="RL (base)" value={row.rl ?? 'unknown'} />
+                  </>
+                ) : (
+                  <DetailItem label="RL" value={row.rl ?? 'unknown'} />
+                )}
                 <DetailItem label="Affected Component" value={row.component_name ?? 'none'} />
                 <DetailItem label="Affected CIA" value={formatCIAFlags(row.affected_CIA_parts)} />
               </DetailGrid>
+              <RiskTreatmentEditor key={`${row.id}-${row.treatment_decision}`} row={row} />
             </DetailBlock>
           )
         }}
         columns={[
           { key: 'id', label: 'ID', render: (row) => `R.${row.id}` },
           { key: 'title', label: 'Risk', render: (row) => row.title },
-          { key: 'afl', label: 'AFL', render: (row) => ratingText(row.afl, row.afl_value) },
+          {
+            key: 'afl',
+            label: 'AFL',
+            render: (row) => {
+              const eff = getEffectiveAflForTS(
+                row.threat_scenario,
+                state.threatScenarios,
+                state.attackSteps,
+                activeControls
+              )
+              const base = ratingText(row.afl, row.afl_value)
+              if (eff && eff.value !== row.afl_value) {
+                return `${eff.level} (${eff.value}) ← ${base}`
+              }
+              return base
+            },
+          },
           {
             key: 'impact',
             label: 'IL',
             render: (row) => ratingText(row.il_label, row.il),
           },
-          { key: 'rl', label: 'RL', render: (row) => row.rl ?? 'unknown' },
-          { key: 'component', label: 'Affected Component', render: (row) => row.component_name ?? 'none' },
+          {
+            key: 'rl',
+            label: 'RL',
+            render: (row) => {
+              const eff = getEffectiveAflForTS(
+                row.threat_scenario,
+                state.threatScenarios,
+                state.attackSteps,
+                activeControls
+              )
+              const effectiveRl =
+                eff != null && row.il != null ? calculateRiskLevel(row.il, eff.value) : null
+              if (effectiveRl != null && effectiveRl !== row.rl) {
+                return `${effectiveRl} ← ${row.rl ?? 'unknown'}`
+              }
+              return row.rl ?? 'unknown'
+            },
+          },
           { key: 'cia', label: 'CIA', render: (row) => formatCIAFlags(row.affected_CIA_parts) },
+          {
+            key: 'treatment',
+            label: 'Treatment',
+            render: (row) => row.treatment_decision
+              ? TREATMENT_LABELS[row.treatment_decision] ?? row.treatment_decision
+              : '—',
+          },
         ]}
       />
     ) : (

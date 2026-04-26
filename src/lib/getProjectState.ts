@@ -3,7 +3,10 @@ import type {
   AttackStepModel,
   ComponentModel,
   CompromisesModel,
+  ControlClassModel,
+  ControlGroupModel,
   ControlModel,
+  CybersecurityGoalModel,
   DamageScenarioModel,
   DataEntityModel,
   TechnologyModel,
@@ -25,11 +28,14 @@ type LoadedProjectState = {
   components: ComponentModel[]
   dataEntities: DataEntityModel[]
   controls: ControlModel[]
+  controlClasses: ControlClassModel[]
+  controlGroups: ControlGroupModel[]
   threatClasses: ThreatClassModel[]
   attackSteps: AttackStepModel[]
   threatScenarios: ThreatScenarioModel[]
   damageScenarios: DamageScenarioModel[]
   compromises: CompromisesModel[]
+  cybersecurityGoals: CybersecurityGoalModel[]
 }
 
 async function getList<T>(url: string, projectId: string | number): Promise<T[]> {
@@ -37,6 +43,11 @@ async function getList<T>(url: string, projectId: string | number): Promise<T[]>
     params: { project_id: projectId },
   })
 
+  return Array.isArray(response.data) ? (response.data as T[]) : []
+}
+
+async function getGlobalList<T>(url: string): Promise<T[]> {
+  const response = await api.get(url)
   return Array.isArray(response.data) ? (response.data as T[]) : []
 }
 
@@ -51,16 +62,22 @@ export async function getProjectState(
     componentsRaw,
     technologies,
     controls,
+    controlClasses,
+    controlGroups,
     attackSteps,
     threatScenariosRaw,
     damageScenariosRaw,
+    cybersecurityGoals,
   ] = await Promise.all([
     getList<ComponentApiItem>('/component/', projectId),
     getList<TechnologyModel>('/technology/', projectId),
     getList<ControlModel>('/control/', projectId),
+    getGlobalList<ControlClassModel>('/control_class/'),
+    getList<ControlGroupModel>('/control_group/', projectId),
     getList<AttackStepModel>('/attack_step/', projectId),
     getList<Partial<ThreatScenarioModel>>('/threat_scenario/', projectId),
     getList<DamageScenarioModel>('/damage_scenario/', projectId),
+    getList<CybersecurityGoalModel>('/cybersecurity_goal/', projectId),
   ])
 
   const components = componentsRaw.map((component) => ({
@@ -107,7 +124,6 @@ export async function getProjectState(
       name: scenario.name,
       description: scenario.description ?? '',
       affected_CIA_parts: scenario.affected_CIA_parts,
-      impact_scale: scenario.impact_scale,
       safety_impact: scenario.safety_impact,
       finantial_impact: scenario.finantial_impact,
       operational_impact: scenario.operational_impact,
@@ -124,10 +140,14 @@ export async function getProjectState(
     technologies,
     components,
     dataEntities,
+    controlClasses,
+    controlGroups,
     controls: controls.map((control) => ({
       ...control,
       description: control.description ?? '',
-      attack_steps: (control as ControlModel & { attack_steps?: number[] }).attack_steps ?? [],
+      control_class: control.control_class ?? null,
+      attack_steps: control.attack_steps ?? [],
+      threat_scenarios: control.threat_scenarios ?? [],
       attack_potential_points: control.attack_potential_points ?? null,
       attack_potential: control.attack_potential ?? null,
       afl: control.afl ?? null,
@@ -147,5 +167,10 @@ export async function getProjectState(
     threatScenarios,
     damageScenarios,
     compromises: [],
+    cybersecurityGoals: cybersecurityGoals.map((g) => ({
+      ...g,
+      damage_scenarios: g.damage_scenarios ?? [],
+      controls: g.controls ?? [],
+    })),
   }
 }

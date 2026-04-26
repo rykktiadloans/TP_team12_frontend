@@ -2,7 +2,10 @@ import type {
   AttackStepModel,
   ComponentModel,
   CompromisesModel,
+  ControlClassModel,
+  ControlGroupModel,
   ControlModel,
+  CybersecurityGoalModel,
   DamageScenarioModel,
   DataEntityModel,
   Model,
@@ -36,10 +39,17 @@ export interface ModelState {
   threatScenarios: Map<number, ThreatScenarioModel>
   damageScenarios: Map<number, DamageScenarioModel>
   compromises: Map<number, CompromisesModel>
+  cybersecurityGoals: Map<number, CybersecurityGoalModel>
 }
+
+// 'all' = virtual "All Controls", 'none' = virtual "No Controls", number = real group ID
+export type ActiveControlGroup = 'all' | 'none' | number
 
 export interface ModelStore {
   state: ModelState
+  controlClasses: Map<number, ControlClassModel>
+  controlGroups: ControlGroupModel[]
+  activeControlGroupId: ActiveControlGroup
 
   // explorer/tree slice
   tree: TreeNode[]
@@ -53,6 +63,9 @@ export interface ModelStore {
   risksError: string
 
   loadProjectState: (projectId: string | number) => Promise<void>
+  setActiveControlGroupId: (id: ActiveControlGroup) => void
+  setControlGroups: (groups: ControlGroupModel[]) => void
+  getActiveControlIds: () => number[]
   loadRisks: (projectId: string | number) => Promise<void>
   loadTree: (projectId: string | number) => Promise<void>
   setSelectedId: (id: string) => void
@@ -97,6 +110,7 @@ function createEmptyState(): ModelState {
     threatScenarios: new Map<number, ThreatScenarioModel>(),
     damageScenarios: new Map<number, DamageScenarioModel>(),
     compromises: new Map<number, CompromisesModel>(),
+    cybersecurityGoals: new Map<number, CybersecurityGoalModel>(),
   }
 }
 
@@ -223,8 +237,19 @@ function resolveConnectionDirection(
   return null
 }
 
+function getPersistedActiveControlGroupId(): ActiveControlGroup {
+  const stored = sessionStorage.getItem('activeControlGroupId')
+  if (!stored) return 'all'
+  if (stored === 'all' || stored === 'none') return stored
+  const n = Number(stored)
+  return isFinite(n) && !isNaN(n) ? n : 'all'
+}
+
 export const useModelStore = create<ModelStore>((set, get) => ({
   state: createEmptyState(),
+  controlClasses: new Map<number, ControlClassModel>(),
+  controlGroups: [],
+  activeControlGroupId: getPersistedActiveControlGroupId(),
 
   // explorer/tree slice
   tree: [],
@@ -246,6 +271,8 @@ export const useModelStore = create<ModelStore>((set, get) => ({
 
       set({
         risks,
+        controlClasses: new Map(projectState.controlClasses.map((item) => [item.id, item])),
+        controlGroups: projectState.controlGroups,
         state: {
           technologies: new Map(
             projectState.technologies.map((item) => [item.id, item])
@@ -272,12 +299,34 @@ export const useModelStore = create<ModelStore>((set, get) => ({
           compromises: new Map(
             projectState.compromises.map((item) => [item.id, item])
           ),
+          cybersecurityGoals: new Map(
+            projectState.cybersecurityGoals.map((item) => [item.id, item])
+          ),
         },
       })
     } catch (error) {
       console.error(error)
       set({ state: createEmptyState(), risks: [] })
     }
+  },
+
+  setActiveControlGroupId: (id: ActiveControlGroup) => {
+    sessionStorage.setItem('activeControlGroupId', String(id))
+    set({ activeControlGroupId: id })
+  },
+
+  setControlGroups: (groups: ControlGroupModel[]) => {
+    set({ controlGroups: groups })
+  },
+
+  getActiveControlIds: () => {
+    const { activeControlGroupId, controlGroups, state } = get()
+    if (activeControlGroupId === 'none') return []
+    if (activeControlGroupId === 'all') {
+      return [...state.controls.keys()]
+    }
+    const group = controlGroups.find((g) => g.id === activeControlGroupId)
+    return group ? group.controls.map((c) => c.id) : []
   },
 
   loadRisks: async (projectId: string | number) => {
@@ -335,6 +384,7 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     set({
       tree: [],
       state: createEmptyState(),
+      controlGroups: [],
       treeLoading: false,
       treeError: '',
       selectedId: '',
@@ -372,6 +422,8 @@ export const useModelStore = create<ModelStore>((set, get) => ({
         return state.damageScenarios.get(n) ?? null
       case 'compromise':
         return state.compromises.get(n) ?? null
+      case 'cybersecurityGoal':
+        return state.cybersecurityGoals.get(n) ?? null
       default:
         return null
     }
@@ -416,6 +468,10 @@ export const useModelStore = create<ModelStore>((set, get) => ({
       case 'compromise':
         map = state.compromises
         map.set(model.id, model as CompromisesModel)
+        break
+      case 'cybersecurityGoal':
+        map = state.cybersecurityGoals
+        map.set(model.id, model as CybersecurityGoalModel)
         break
     }
 
@@ -500,6 +556,9 @@ export const useModelStore = create<ModelStore>((set, get) => ({
         break
       case 'compromise':
         map = state.compromises
+        break
+      case 'cybersecurityGoal':
+        map = state.cybersecurityGoals
         break
     }
 
@@ -678,6 +737,7 @@ export function keyToModelType(type: keyof ModelState): ModelType {
     threatScenarios: 'threatScenario',
     damageScenarios: 'damageScenario',
     compromises: 'compromise',
+    cybersecurityGoals: 'cybersecurityGoal',
   } as Record<keyof ModelState, ModelType>
   return table[type]
 }
@@ -693,6 +753,7 @@ export function modelTypeToKey(modelType: ModelType): keyof ModelState {
     threatScenario: 'threatScenarios',
     damageScenario: 'damageScenarios',
     compromise: 'compromises',
+    cybersecurityGoal: 'cybersecurityGoals',
   } as Record<ModelType, keyof ModelState>
 
   return table[modelType]
@@ -712,7 +773,7 @@ export function connectionType(
       ['component', 'one'],
       ['technology', 'many'],
     ],
-    control: [['component', 'one']],
+    control: [['component', 'one'], ['threatScenario', 'many']],
     threatClass: [],
     attackStep: [
       ['component', 'one'],
@@ -733,6 +794,10 @@ export function connectionType(
     compromise: [
       ['component', 'one'],
       ['threatScenario', 'one'],
+    ],
+    cybersecurityGoal: [
+      ['damageScenario', 'many'],
+      ['control', 'many'],
     ],
   } as Record<ModelType, [ModelType, 'many' | 'one'][]>
 
@@ -761,6 +826,7 @@ export function connectionProperty(
     },
     control: {
       component: 'component',
+      threatScenario: 'threat_scenarios',
     },
     threatClass: {},
     attackStep: {
@@ -782,6 +848,10 @@ export function connectionProperty(
     compromise: {
       component: 'component',
       threatScenario: 'threat_scenario',
+    },
+    cybersecurityGoal: {
+      damageScenario: 'damage_scenarios',
+      control: 'controls',
     },
   } as Record<ModelType, Record<ModelType, string | undefined>>
 

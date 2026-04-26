@@ -61,9 +61,12 @@ export function getName(model: Model): string {
   return 'Compromise ' + model.id
 }
 
+const GRAPH_EXCLUDED_KEYS: Array<keyof ModelState> = ['cybersecurityGoals']
+
 function stateToNodes(state: ModelState): Node[] {
   const nodes = Object.entries(state).flatMap(
     ([name, map]: [string, Map<number, Model>]) => {
+      if (GRAPH_EXCLUDED_KEYS.includes(name as keyof ModelState)) return []
       const key = keyToModelType(name as keyof ModelState)
       const models = [...map.values()].map((model): Node => {
       const name = getName(model)

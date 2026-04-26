@@ -3,6 +3,7 @@ import type {
   AttackStepModel,
   ComponentModel,
   ControlModel,
+  CybersecurityGoalModel,
   DamageScenarioModel,
   Model,
   ModelType,
@@ -17,6 +18,7 @@ const endpointByType: Partial<Record<ModelType, string>> = {
   attackStep: '/attack_step/',
   threatScenario: '/threat_scenario/',
   damageScenario: '/damage_scenario/',
+  cybersecurityGoal: '/cybersecurity_goal/',
 }
 
 export function supportsApiCreateType(type: ModelType) {
@@ -74,12 +76,15 @@ function toApiPayload(type: ModelType, model: Model) {
       return {
         name: control.name,
         description: control.description,
+        control_class: control.control_class ?? null,
         fr_et: control.fr_et,
         fr_se: control.fr_se,
         fr_koC: control.fr_koC,
         fr_WoO: control.fr_WoO,
         fr_eq: control.fr_eq,
         component: control.component,
+        attack_steps: control.attack_steps ?? [],
+        threat_scenarios: control.threat_scenarios ?? [],
         project_id: projectId,
       }
     }
@@ -120,13 +125,23 @@ function toApiPayload(type: ModelType, model: Model) {
         name: damageScenario.name,
         description: damageScenario.description,
         affected_CIA_parts: damageScenario.affected_CIA_parts,
-        impact_scale: damageScenario.impact_scale,
         safety_impact: damageScenario.safety_impact,
         finantial_impact: damageScenario.finantial_impact,
         operational_impact: damageScenario.operational_impact,
         privacy_impact: damageScenario.privacy_impact,
         threat_scenarios: damageScenario.threat_scenarios ?? [],
         concerns: damageScenario.concerns ?? [],
+        project_id: projectId,
+      }
+    }
+    case 'cybersecurityGoal': {
+      const goal = model as CybersecurityGoalModel
+      return {
+        name: goal.name,
+        description: goal.description,
+        cal: goal.cal,
+        damage_scenarios: goal.damage_scenarios ?? [],
+        controls: goal.controls ?? [],
         project_id: projectId,
       }
     }
@@ -163,8 +178,10 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         fr_koC: data.fr_koC ?? 0,
         fr_WoO: data.fr_WoO ?? 0,
         fr_eq: data.fr_eq ?? 0,
+        control_class: data.control_class ?? null,
         component: data.component ?? null,
         attack_steps: data.attack_steps ?? [],
+        threat_scenarios: data.threat_scenarios ?? [],
         attack_potential_points: data.attack_potential_points ?? null,
         attack_potential: data.attack_potential ?? null,
         afl: data.afl ?? null,
@@ -211,7 +228,6 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         name: data.name ?? '',
         description: data.description ?? '',
         affected_CIA_parts: data.affected_CIA_parts ?? 0,
-        impact_scale: data.impact_scale ?? 0,
         safety_impact: data.safety_impact ?? 0,
         finantial_impact: data.finantial_impact ?? 0,
         operational_impact: data.operational_impact ?? 0,
@@ -222,6 +238,16 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         il_label: data.il_label ?? 'Negligible',
         project: data.project ?? null,
       } as DamageScenarioModel
+    case 'cybersecurityGoal':
+      return {
+        id: data.id,
+        name: data.name ?? '',
+        description: data.description ?? '',
+        cal: data.cal ?? null,
+        damage_scenarios: data.damage_scenarios ?? [],
+        controls: data.controls ?? [],
+        project: data.project ?? null,
+      } as CybersecurityGoalModel
     default:
       return data as Model
   }

@@ -1,4 +1,4 @@
-export type ModelType = 
+export type ModelType =
   | 'technology'
   | 'component'
   | 'dataEntity'
@@ -8,6 +8,7 @@ export type ModelType =
   | 'threatScenario'
   | 'damageScenario'
   | 'compromise'
+  | 'cybersecurityGoal'
 
 export interface Model {
   id: number
@@ -40,6 +41,16 @@ export interface DataEntityModel extends Model{
   project: number | null
 }
 
+export interface ControlClassModel extends Model {
+  name: string
+  description: string
+  fr_et: number
+  fr_se: number
+  fr_koC: number
+  fr_WoO: number
+  fr_eq: number
+}
+
 export interface ControlModel extends Model {
   name: string
   description: string
@@ -48,8 +59,10 @@ export interface ControlModel extends Model {
   fr_koC: number
   fr_WoO: number
   fr_eq: number
+  control_class: number | null
   component: number | null
   attack_steps: number[]
+  threat_scenarios: number[]
   attack_potential_points?: number | null
   attack_potential?: string | null
   afl?: string | null
@@ -99,7 +112,6 @@ export interface DamageScenarioModel extends Model{
   name: string
   description: string
   affected_CIA_parts: number
-  impact_scale: number
   safety_impact: number
   finantial_impact: number
   operational_impact: number
@@ -118,6 +130,23 @@ export interface CompromisesModel extends Model{
   project: number | null
 }
 
+export interface CybersecurityGoalModel extends Model {
+  name: string
+  description: string
+  cal: number | null
+  damage_scenarios: number[]
+  controls: number[]
+  project: number
+}
+
+export interface ControlGroupModel extends Model {
+  name: string
+  description: string
+  controls: Array<{ id: number; name: string }>
+  project: number
+  created_at: string
+}
+
 export interface GeneratedRiskModel {
   id: string
   title: string
@@ -133,7 +162,13 @@ export interface GeneratedRiskModel {
   attack_potential: string | null
   afl: string | null
   afl_value: number | null
+  safety_impact: number
+  finantial_impact: number
+  operational_impact: number
+  privacy_impact: number
   il: number
   il_label: string
   rl: number | null
+  treatment_decision: string | null
+  treatment_rationale: string
 }

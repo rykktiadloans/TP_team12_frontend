@@ -21,6 +21,7 @@ function formatModelTypeLabel(type: ModelType) {
     threatScenario: 'Threat Scenario',
     damageScenario: 'Damage Scenario',
     compromise: 'Compromise',
+    cybersecurityGoal: 'Cybersecurity Goal',
   }
 
   return labels[type]
@@ -37,6 +38,7 @@ export function NewModelButton({ fixedType, label = 'New' }: Props) {
     'threatScenario',
     'damageScenario',
     'compromise',
+    'cybersecurityGoal',
   ]
 
   const addItem = useModelStore((store) => store.addItem)

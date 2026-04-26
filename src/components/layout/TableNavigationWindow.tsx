@@ -21,8 +21,8 @@ export function TableNavigationWindow({
     damageScenarios: state.damageScenarios.size,
     attackSteps: state.attackSteps.size,
     controls: state.controls.size,
-    controlScenarios: 0,
     risks: risks.length,
+    cybersecurityGoals: state.cybersecurityGoals.size,
   }
 
   return (

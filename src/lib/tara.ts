@@ -162,6 +162,34 @@ export function formatAttackFeasibilityRating(row: AttackFeasibilityInput) {
   return `${rating.level} (${rating.value})`
 }
 
+export function calculateEffectiveAttackFeasibilityRating(
+  attackStep: AttackFeasibilityInput & { id: number },
+  activeControls: Array<AttackFeasibilityInput & { attack_steps: number[] }>
+): AttackFeasibilityRating {
+  const relevant = activeControls.filter((c) => c.attack_steps.includes(attackStep.id))
+
+  const effective: AttackFeasibilityInput = {
+    fr_et:  attackStep.fr_et  + relevant.reduce((s, c) => s + c.fr_et,  0),
+    fr_se:  attackStep.fr_se  + relevant.reduce((s, c) => s + c.fr_se,  0),
+    fr_koC: attackStep.fr_koC + relevant.reduce((s, c) => s + c.fr_koC, 0),
+    fr_WoO: attackStep.fr_WoO + relevant.reduce((s, c) => s + c.fr_WoO, 0),
+    fr_eq:  attackStep.fr_eq  + relevant.reduce((s, c) => s + c.fr_eq,  0),
+  }
+
+  return calculateAttackFeasibilityRating(effective)
+}
+
+const RISK_LEVEL_MATRIX: Record<number, Record<number, number>> = {
+  0: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 },
+  1: { 1: 1, 2: 1, 3: 2, 4: 2, 5: 3 },
+  2: { 1: 1, 2: 2, 3: 3, 4: 3, 5: 4 },
+  3: { 1: 2, 2: 3, 3: 4, 4: 5, 5: 5 },
+}
+
+export function calculateRiskLevel(ilValue: number, aflValue: number): number | null {
+  return RISK_LEVEL_MATRIX[ilValue]?.[aflValue] ?? null
+}
+
 export function calculateImpactLevel(row: ImpactLevelInput) {
   return Math.max(
     asNumber(row.safety_impact),

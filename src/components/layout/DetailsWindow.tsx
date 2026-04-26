@@ -430,6 +430,7 @@ const allModelTypes: ModelType[] = [
   'threatScenario',
   'damageScenario',
   'compromise',
+  'cybersecurityGoal',
 ]
 
 function getRelevantRelatedTypes(currentType: ModelType) {
@@ -451,6 +452,7 @@ function formatModelTypeLabel(type: ModelType) {
     threatScenario: 'Threat Scenario',
     damageScenario: 'Damage Scenario',
     compromise: 'Compromise',
+    cybersecurityGoal: 'Cybersecurity Goal',
   }
 
   return labels[type]
@@ -467,6 +469,7 @@ function getModelsForType(type: ModelType, state: ModelState): Model[] {
     threatScenario: state.threatScenarios as Map<number, Model>,
     damageScenario: state.damageScenarios as Map<number, Model>,
     compromise: state.compromises as Map<number, Model>,
+    cybersecurityGoal: state.cybersecurityGoals as Map<number, Model>,
   }
 
   return [...maps[type].values()]
@@ -608,6 +611,13 @@ function getRelatedItems(type: ModelType, item: Model, state: ModelState) {
       return [
         { label: 'Component', items: listFromIds('component', compromise.component == null ? [] : [compromise.component], state.components as Map<number, Model>) },
         { label: 'Threat Scenario', items: listFromIds('threatScenario', compromise.threat_scenario == null ? [] : [compromise.threat_scenario], state.threatScenarios as Map<number, Model>) },
+      ].filter((group) => group.items.length)
+    }
+    case 'cybersecurityGoal': {
+      const goal = item as Model & { damage_scenarios: number[]; controls: number[] }
+      return [
+        { label: 'Damage Scenarios', items: listFromIds('damageScenario', goal.damage_scenarios ?? [], state.damageScenarios as Map<number, Model>) },
+        { label: 'Controls', items: listFromIds('control', goal.controls ?? [], state.controls as Map<number, Model>) },
       ].filter((group) => group.items.length)
     }
     default:

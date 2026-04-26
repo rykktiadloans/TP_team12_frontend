@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { GitBranch, Table2 } from 'lucide-react'
 import { Button } from '../ui/button'
+import { ControlGroupManager } from '@/components/control-groups/ControlGroupManager'
 
 export type ProjectViewMode = 'graph' | 'table'
 
@@ -30,6 +31,10 @@ export default function Toolbar({ viewMode, onViewModeChange }: ToolbarProps) {
         <Table2 />
         TABLE VIEW
       </Button>
+
+      <div className="ml-auto">
+        <ControlGroupManager />
+      </div>
     </div>
   )
 }

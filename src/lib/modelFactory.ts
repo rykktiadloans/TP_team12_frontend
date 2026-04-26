@@ -3,6 +3,7 @@ import type {
   ComponentModel,
   CompromisesModel,
   ControlModel,
+  CybersecurityGoalModel,
   DamageScenarioModel,
   DataEntityModel,
   Model,
@@ -44,8 +45,10 @@ export function createDefaultModel(type: ModelType): Model {
         fr_koC: 0,
         fr_WoO: 0,
         fr_eq: 0,
+        control_class: null,
         component: null,
         attack_steps: [],
+        threat_scenarios: [],
         attack_potential_points: null,
         attack_potential: null,
         afl: null,
@@ -94,7 +97,6 @@ export function createDefaultModel(type: ModelType): Model {
         name: '',
         description: '',
         affected_CIA_parts: 0,
-        impact_scale: 0,
         safety_impact: 0,
         finantial_impact: 0,
         operational_impact: 0,
@@ -113,6 +115,16 @@ export function createDefaultModel(type: ModelType): Model {
         threat_scenario: null,
         project: null,
       } as CompromisesModel
+    case 'cybersecurityGoal':
+      return {
+        id: -1,
+        name: '',
+        description: '',
+        cal: null,
+        damage_scenarios: [],
+        controls: [],
+        project: -1,
+      } as CybersecurityGoalModel
     default:
       return { id: -1 }
   }

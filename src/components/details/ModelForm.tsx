@@ -3,6 +3,7 @@ import type {
   ComponentModel,
   CompromisesModel,
   ControlModel,
+  CybersecurityGoalModel,
   DamageScenarioModel,
   DataEntityModel,
   Model,
@@ -19,6 +20,7 @@ import { AlertCircleIcon } from 'lucide-react'
 import {
   asNumber,
   calculateAttackFeasibilityRating,
+  calculateEffectiveAttackFeasibilityRating,
   calculateImpactLevel,
   elapsedTimeOptions,
   equipmentOptions,
@@ -182,6 +184,9 @@ function RelationList({
 
 export function ModelForm({ model, setModel = () => {} }: Props) {
   const state = useModelStore((store) => store.state)
+  const controlClasses = useModelStore((store) => store.controlClasses)
+  const getActiveControlIds = useModelStore((store) => store.getActiveControlIds)
+  useModelStore((store) => store.activeControlGroupId) // re-render when group changes
   const addConnection = useModelStore((store) => store.addConnection)
   const deleteConnection = useModelStore((store) => store.deleteConnection)
 
@@ -294,6 +299,38 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
   if (model.type == 'control') {
     const control = model.item as ControlModel
     const attackFeasibilityRating = calculateAttackFeasibilityRating(control)
+    const availableControlClasses = [...controlClasses.values()]
+    const applyControlClass = (classId: number) => {
+      const cls = controlClasses.get(classId)
+      if (!cls) return
+      setModel({
+        type: model.type,
+        item: {
+          ...control,
+          control_class: classId,
+          fr_et: cls.fr_et,
+          fr_se: cls.fr_se,
+          fr_koC: cls.fr_koC,
+          fr_WoO: cls.fr_WoO,
+          fr_eq: cls.fr_eq,
+        } as ControlModel,
+      })
+    }
+    const availableThreatScenarios = [...state.threatScenarios.values()].map((ts) => ({
+      id: ts.id,
+      label: ts.name || `Threat Scenario ${ts.id}`,
+    }))
+    const toggleThreatScenario = (tsId: number, checked: boolean) => {
+      const next = checked
+        ? [...new Set([...(control.threat_scenarios ?? []), tsId])]
+        : (control.threat_scenarios ?? []).filter((id) => id !== tsId)
+      setModel({ type: model.type, item: { ...control, threat_scenarios: next } as ControlModel })
+      if (control.id < 0) return
+      const promise = checked
+        ? addConnection(control.id, 'control', tsId, 'threatScenario')
+        : deleteConnection(control.id, 'control', tsId, 'threatScenario')
+      void promise.catch((error) => { console.error(error) })
+    }
     const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
       control.name = event.target.value
       setModel({ type: model.type, item: {...control} })
@@ -338,7 +375,47 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-et">Elapsed Time</FieldLabel>
+            <FieldLabel htmlFor="control-class">Instantiates</FieldLabel>
+            <select
+              id="control-class"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none"
+              value={control.control_class ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                if (val === '') {
+                  setModel({ type: model.type, item: { ...control, control_class: null } as ControlModel })
+                } else {
+                  applyControlClass(Number(val))
+                }
+              }}
+            >
+              <option value="">— None —</option>
+              {availableControlClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Selecting a class fills the factor fields with its default values. You can still adjust them freely.
+            </p>
+          </Field>
+          <Field>
+            <FieldLabel>Threatened By</FieldLabel>
+            <RelationCheckboxList
+              idPrefix="control-threat-scenarios"
+              options={availableThreatScenarios}
+              selectedIds={control.threat_scenarios ?? []}
+              onToggle={toggleThreatScenario}
+              emptyLabel="No threat scenarios available yet."
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Threat scenarios this control addresses. Traceability only — does not affect calculations.
+            </p>
+          </Field>
+          <p className="text-xs text-muted-foreground">
+            The values below define how much additional effort this control requires from an attacker to bypass. They are added on top of the mitigated attack step's base factors.
+          </p>
+          <Field>
+            <FieldLabel htmlFor="control-fr-et">Added Elapsed Time</FieldLabel>
             <OptionSelect
               id="control-fr-et"
               value={control.fr_et}
@@ -347,7 +424,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-se">Specialist Expertise</FieldLabel>
+            <FieldLabel htmlFor="control-fr-se">Added Specialist Expertise</FieldLabel>
             <OptionSelect
               id="control-fr-se"
               value={control.fr_se}
@@ -356,7 +433,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-koc">Knowledge of Component</FieldLabel>
+            <FieldLabel htmlFor="control-fr-koc">Added Knowledge Required</FieldLabel>
             <OptionSelect
               id="control-fr-koc"
               value={control.fr_koC}
@@ -365,7 +442,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-woo">Window of Opportunity</FieldLabel>
+            <FieldLabel htmlFor="control-fr-woo">Added Window of Opportunity</FieldLabel>
             <OptionSelect
               id="control-fr-woo"
               value={control.fr_WoO}
@@ -374,7 +451,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="control-fr-eq">Equipment</FieldLabel>
+            <FieldLabel htmlFor="control-fr-eq">Added Equipment Required</FieldLabel>
             <OptionSelect
               id="control-fr-eq"
               value={control.fr_eq}
@@ -383,7 +460,7 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel>AFL</FieldLabel>
+            <FieldLabel>Local Contribution (AFL)</FieldLabel>
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
               {formatAttackFeasibilityRating(control)} | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} points
             </div>
@@ -432,6 +509,15 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
   if (model.type == 'attackStep') {
     const attackStep = model.item as AttackStepModel
     const attackFeasibilityRating = calculateAttackFeasibilityRating(attackStep)
+    const activeControlIds = getActiveControlIds()
+    const activeControls = [...state.controls.values()].filter((c) =>
+      activeControlIds.includes(c.id)
+    )
+    const effectiveRating = calculateEffectiveAttackFeasibilityRating(
+      { ...attackStep, id: attackStep.id },
+      activeControls
+    )
+    const hasActiveControls = activeControls.some((c) => c.attack_steps.includes(attackStep.id))
     const availablePreviousSteps = [...state.attackSteps.values()]
       .filter((step) => step.id !== attackStep.id)
       .map((step) => ({ id: step.id, label: step.name || `Attack Step ${step.id}` }))
@@ -587,10 +673,23 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
             />
           </Field>
           <Field>
-            <FieldLabel>AFL</FieldLabel>
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-              {formatAttackFeasibilityRating(attackStep)} | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} points
-            </div>
+            <FieldLabel>Attack Feasibility</FieldLabel>
+            {hasActiveControls ? (
+              <div className="flex flex-col gap-1.5">
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground text-xs mr-2">Effective (with controls):</span>
+                  {effectiveRating.level} ({effectiveRating.value}) | {effectiveRating.attackPotential} | {formatAttackPotentialPoints(effectiveRating.points)} pts
+                </div>
+                <div className="rounded-md border bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                  <span className="mr-2">Base (no controls):</span>
+                  {attackFeasibilityRating.level} ({attackFeasibilityRating.value}) | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} pts
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                {formatAttackFeasibilityRating(attackStep)} | {attackFeasibilityRating.attackPotential} | {formatAttackPotentialPoints(attackFeasibilityRating.points)} pts
+              </div>
+            )}
           </Field>
         </FieldGroup>
       </form>
@@ -684,7 +783,6 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
         type: model.type,
         item: {
           ...nextDamageScenario,
-          impact_scale: calculateImpactLevel(nextDamageScenario),
           affected_CIA_parts: concernSummary(nextDamageScenario.concerns ?? []),
         } as DamageScenarioModel,
       })
@@ -841,6 +939,100 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               value={damageScenario.privacy_impact}
               options={impactOptions}
               onChange={setPrivacyImpact}
+            />
+          </Field>
+        </FieldGroup>
+      </form>
+    )
+  }
+
+  if (model.type == 'cybersecurityGoal') {
+    const goal = model.item as CybersecurityGoalModel
+    const availableDamageScenarios = [...state.damageScenarios.values()].map((ds) => ({
+      id: ds.id,
+      label: ds.name || `Damage Scenario ${ds.id}`,
+    }))
+    const availableControls = [...state.controls.values()].map((c) => ({
+      id: c.id,
+      label: c.name || `Control ${c.id}`,
+    }))
+    const setName: ChangeEventHandler<HTMLInputElement> = (event) => {
+      setModel({ type: model.type, item: { ...goal, name: event.target.value } as CybersecurityGoalModel })
+    }
+    const setDescription: ChangeEventHandler<HTMLInputElement> = (event) => {
+      setModel({ type: model.type, item: { ...goal, description: event.target.value } as CybersecurityGoalModel })
+    }
+    const toggleDS = (id: number, checked: boolean) => {
+      const next = checked
+        ? [...new Set([...(goal.damage_scenarios ?? []), id])]
+        : (goal.damage_scenarios ?? []).filter((x) => x !== id)
+      setModel({ type: model.type, item: { ...goal, damage_scenarios: next } as CybersecurityGoalModel })
+      if (goal.id < 0) return
+      const promise = checked
+        ? addConnection(goal.id, 'cybersecurityGoal', id, 'damageScenario')
+        : deleteConnection(goal.id, 'cybersecurityGoal', id, 'damageScenario')
+      void promise.catch(console.error)
+    }
+    const toggleControl = (id: number, checked: boolean) => {
+      const next = checked
+        ? [...new Set([...(goal.controls ?? []), id])]
+        : (goal.controls ?? []).filter((x) => x !== id)
+      setModel({ type: model.type, item: { ...goal, controls: next } as CybersecurityGoalModel })
+      if (goal.id < 0) return
+      const promise = checked
+        ? addConnection(goal.id, 'cybersecurityGoal', id, 'control')
+        : deleteConnection(goal.id, 'cybersecurityGoal', id, 'control')
+      void promise.catch(console.error)
+    }
+    return (
+      <form>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="cg-name">Name</FieldLabel>
+            <Input id="cg-name" value={goal.name} onChange={setName} placeholder="e.g. CG-01" />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="cg-desc">Description</FieldLabel>
+            <Input id="cg-desc" value={goal.description} onChange={setDescription}
+              placeholder="The security objective to achieve…" />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="cg-cal">CAL (Cybersecurity Assurance Level)</FieldLabel>
+            <select
+              id="cg-cal"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              value={goal.cal ?? ''}
+              onChange={(e) =>
+                setModel({
+                  type: model.type,
+                  item: { ...goal, cal: e.target.value ? Number(e.target.value) : null } as CybersecurityGoalModel,
+                })
+              }
+            >
+              <option value="">— Not set —</option>
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>CAL {n}</option>
+              ))}
+            </select>
+          </Field>
+          <Field>
+            <FieldLabel>Derived From (Damage Scenarios)</FieldLabel>
+            <RelationCheckboxList
+              idPrefix="cg-ds"
+              options={availableDamageScenarios}
+              selectedIds={goal.damage_scenarios ?? []}
+              onToggle={toggleDS}
+              emptyLabel="No damage scenarios available yet."
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Addressed By (Controls)</FieldLabel>
+            <RelationCheckboxList
+              idPrefix="cg-controls"
+              options={availableControls}
+              selectedIds={goal.controls ?? []}
+              onToggle={toggleControl}
+              emptyLabel="No controls available yet."
             />
           </Field>
         </FieldGroup>
