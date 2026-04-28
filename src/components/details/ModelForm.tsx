@@ -80,6 +80,127 @@ const ciaCheckboxOptions = [
   { bit: 1, label: 'Availability' },
 ]
 
+const attackStepExamples: Array<{
+  name: string
+  description: string
+  required_access: string
+  fr_et: number
+  fr_se: number
+  fr_koC: number
+  fr_WoO: number
+  fr_eq: number
+}> = [
+  {
+    name: 'CAN frame injection',
+    description: 'Attacker injects crafted CAN frames to influence component behaviour or state.',
+    required_access: 'Physical or logical access to the vehicle network',
+    fr_et: 10,
+    fr_se: 3,
+    fr_koC: 0,
+    fr_WoO: 1,
+    fr_eq: 4,
+  },
+  {
+    name: 'Diagnostic service abuse',
+    description: 'Attacker invokes exposed diagnostic services to read data, alter configuration, or trigger routines.',
+    required_access: 'Diagnostic session through OBD, gateway, or remote maintenance channel',
+    fr_et: 4,
+    fr_se: 3,
+    fr_koC: 3,
+    fr_WoO: 4,
+    fr_eq: 0,
+  },
+  {
+    name: 'Firmware extraction',
+    description: 'Attacker extracts firmware from memory or update packages to discover secrets and implementation weaknesses.',
+    required_access: 'Physical device access, update image access, or debug interface access',
+    fr_et: 17,
+    fr_se: 6,
+    fr_koC: 7,
+    fr_WoO: 10,
+    fr_eq: 7,
+  },
+  {
+    name: 'Credential or key compromise',
+    description: 'Attacker obtains credentials or cryptographic keys and uses them to impersonate trusted software or users.',
+    required_access: 'Access to storage, logs, memory, backend account, or provisioning material',
+    fr_et: 10,
+    fr_se: 6,
+    fr_koC: 7,
+    fr_WoO: 4,
+    fr_eq: 4,
+  },
+]
+
+const threatScenarioExamples: Array<{
+  name: string
+  description: string
+}> = [
+  {
+    name: 'Spoofed in-vehicle network messages',
+    description: 'Attacker sends messages that appear to originate from a trusted ECU to manipulate receiving components.',
+  },
+  {
+    name: 'Unauthorized diagnostic access',
+    description: 'Attacker reaches diagnostic functionality and performs operations outside the intended service context.',
+  },
+  {
+    name: 'Malicious software update',
+    description: 'Attacker delivers or installs an unauthorized software package that changes component behaviour.',
+  },
+  {
+    name: 'Remote service exploitation',
+    description: 'Attacker exploits a remotely reachable service to gain access to vehicle functions, data, or networks.',
+  },
+]
+
+const damageScenarioExamples: Array<{
+  name: string
+  description: string
+  affected_CIA_parts: number
+  safety_impact: number
+  finantial_impact: number
+  operational_impact: number
+  privacy_impact: number
+}> = [
+  {
+    name: 'Loss of integrity of control commands',
+    description: 'Manipulated commands or signals cause unintended or incorrect component behaviour.',
+    affected_CIA_parts: 2,
+    safety_impact: 3,
+    finantial_impact: 2,
+    operational_impact: 3,
+    privacy_impact: 0,
+  },
+  {
+    name: 'Disclosure of sensitive vehicle or user data',
+    description: 'Confidential data is exposed to an unauthorized party through storage, communication, or service misuse.',
+    affected_CIA_parts: 4,
+    safety_impact: 0,
+    finantial_impact: 2,
+    operational_impact: 1,
+    privacy_impact: 3,
+  },
+  {
+    name: 'Loss of availability of vehicle function',
+    description: 'A component or function becomes unavailable, degraded, delayed, or unreliable.',
+    affected_CIA_parts: 1,
+    safety_impact: 2,
+    finantial_impact: 2,
+    operational_impact: 3,
+    privacy_impact: 0,
+  },
+  {
+    name: 'Unauthorized change to security configuration',
+    description: 'Security-relevant settings are modified, weakening protection or enabling later compromise.',
+    affected_CIA_parts: 2,
+    safety_impact: 1,
+    finantial_impact: 2,
+    operational_impact: 2,
+    privacy_impact: 1,
+  },
+]
+
 function CIABitmaskCheckboxGroup({
   idPrefix,
   value,
@@ -556,6 +677,17 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       attackStep.fr_eq = asNumber(event.target.value)
       setModel({ type: model.type, item: {...attackStep} })
     }
+    const applyAttackStepExample = (exampleIndex: number) => {
+      const example = attackStepExamples[exampleIndex]
+      if (!example) return
+      setModel({
+        type: model.type,
+        item: {
+          ...attackStep,
+          ...example,
+        } as AttackStepModel,
+      })
+    }
     const togglePreviousStep = (stepId: number, checked: boolean) => {
       const nextPreviousSteps = checked
         ? [...new Set([...(attackStep.previous_steps ?? []), stepId])]
@@ -581,6 +713,28 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     return (
       <form>
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="attack-step-example">Example</FieldLabel>
+            <select
+              id="attack-step-example"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              defaultValue=""
+              onChange={(event) => {
+                applyAttackStepExample(Number(event.target.value))
+                event.target.value = ''
+              }}
+            >
+              <option value="" disabled>Apply an attack step example</option>
+              {attackStepExamples.map((example, index) => (
+                <option key={example.name} value={index}>
+                  {example.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Applying an example fills the attack-feasibility fields. You can still adjust them freely.
+            </p>
+          </Field>
           <Field>
             <FieldLabel htmlFor="attack-step-name">Name</FieldLabel>
             <Input
@@ -710,6 +864,17 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       threatScenario.description = event.target.value
       setModel({ type: model.type, item: {...threatScenario} })
     }
+    const applyThreatScenarioExample = (exampleIndex: number) => {
+      const example = threatScenarioExamples[exampleIndex]
+      if (!example) return
+      setModel({
+        type: model.type,
+        item: {
+          ...threatScenario,
+          ...example,
+        } as ThreatScenarioModel,
+      })
+    }
     const toggleComponent = (componentId: number, checked: boolean) => {
       const nextComponents = checked
         ? [...new Set([...(threatScenario.components ?? []), componentId])]
@@ -735,6 +900,25 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
     return (
       <form>
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="threat-scenario-example">Example</FieldLabel>
+            <select
+              id="threat-scenario-example"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              defaultValue=""
+              onChange={(event) => {
+                applyThreatScenarioExample(Number(event.target.value))
+                event.target.value = ''
+              }}
+            >
+              <option value="" disabled>Apply a threat scenario example</option>
+              {threatScenarioExamples.map((example, index) => (
+                <option key={example.name} value={index}>
+                  {example.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field>
             <FieldLabel htmlFor="threat-scenario-name">Name</FieldLabel>
             <Input
@@ -838,9 +1022,47 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
         privacy_impact: asNumber(event.target.value),
       })
     }
+    const applyDamageScenarioExample = (exampleIndex: number) => {
+      const example = damageScenarioExamples[exampleIndex]
+      if (!example) return
+      const concerns = damageScenario.concerns ?? []
+      setModel({
+        type: model.type,
+        item: {
+          ...damageScenario,
+          ...example,
+          concerns,
+          affected_CIA_parts: concerns.length
+            ? concernSummary(concerns)
+            : example.affected_CIA_parts,
+        } as DamageScenarioModel,
+      })
+    }
     return (
       <form>
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="damage-scenario-example">Example</FieldLabel>
+            <select
+              id="damage-scenario-example"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              defaultValue=""
+              onChange={(event) => {
+                applyDamageScenarioExample(Number(event.target.value))
+                event.target.value = ''
+              }}
+            >
+              <option value="" disabled>Apply a damage scenario example</option>
+              {damageScenarioExamples.map((example, index) => (
+                <option key={example.name} value={index}>
+                  {example.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Applying an example fills impact ratings and the fallback CIA summary.
+            </p>
+          </Field>
           <Field>
             <FieldLabel htmlFor="damage-scenario-name">Name</FieldLabel>
             <Input
