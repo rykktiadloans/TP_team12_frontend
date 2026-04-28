@@ -1,47 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ModelForm, type ModelFormItem } from '../details/ModelForm'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog'
 import { Button } from '../ui/button'
-import { DialogClose } from '@radix-ui/react-dialog'
-import { FieldGroup } from '../ui/field'
-import type {
-  AttackStepModel,
-  ComponentModel,
-  CompromisesModel,
-  ControlModel,
-  DamageScenarioModel,
-  DataEntityModel,
-  Model,
-  ModelType,
-  NodeModel,
-  TechnologyModel,
-  ThreatClassModel,
-  ThreatScenarioModel,
-} from '@/types/models'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
+import type { Model, ModelType } from '@/types/models'
 import { useModelStore } from '@/store/model-store'
+import { createDefaultModel, hasRequiredName } from '@/lib/modelFactory'
 
-interface Props {}
+interface Props {
+  fixedType?: ModelType
+  label?: string
+}
 
-export function NewModelButton({}: Props) {
-  const types = [
-    'node',
+function formatModelTypeLabel(type: ModelType) {
+  const labels: Record<ModelType, string> = {
+    technology: 'Technology',
+    component: 'Component',
+    dataEntity: 'Data Entity',
+    control: 'Control',
+    threatClass: 'Threat Class',
+    attackStep: 'Attack Step',
+    threatScenario: 'Threat Scenario',
+    damageScenario: 'Damage Scenario',
+    compromise: 'Compromise',
+    cybersecurityGoal: 'Cybersecurity Goal',
+  }
+
+  return labels[type]
+}
+
+export function NewModelButton({ fixedType, label = 'New' }: Props) {
+  const types: ModelType[] = [
     'technology',
     'component',
     'dataEntity',
@@ -51,178 +38,128 @@ export function NewModelButton({}: Props) {
     'threatScenario',
     'damageScenario',
     'compromise',
-  ] as ModelType[]
+    'cybersecurityGoal',
+  ]
 
   const addItem = useModelStore((store) => store.addItem)
-  const [type, setType] = useState('' as ModelType)
-  const [model, setModel] = useState({} as Model)
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState<ModelType | ''>('')
+  const [model, setModel] = useState<Model>({ id: -1 })
+  const [error, setError] = useState('')
+  const dialogModelLabel = fixedType ? formatModelTypeLabel(fixedType) : 'Model'
 
-  const setSelectType = (value: ModelType) => {
-    setType(() => {
-      switch (value) {
-        case 'node':
-          setModel({
-            id: -1,
-            title: '',
-            content: '',
-          } as NodeModel)
-          break
-        case 'technology':
-          setModel({
-            id: -1,
-            name: '',
-            description: '',
-            project: null,
-          } as TechnologyModel)
-          break
-        case 'component':
-          setModel({
-            id: -1,
-            name: '',
-            description: '',
-            communicates_with: [],
-            technology: [],
-            project: null,
-          } as ComponentModel)
-          break
-        case 'dataEntity':
-          setModel({
-            id: -1,
-            name: '',
-            description: '',
-            component: null,
-            technology: [],
-            project: null,
-          } as DataEntityModel)
-          break
-        case 'control':
-          setModel({
-            id: -1,
-            name: '',
-            fr_et: '',
-            fr_se: '',
-            fr_koC: '',
-            fr_WoO: '',
-            fr_eq: '',
-            component: null,
-            project: null,
-          } as ControlModel)
-          break
-        case 'threatClass':
-          setModel({
-            id: -1,
-            name: '',
-            description: '',
-            project: null,
-          } as ThreatClassModel)
-          break
-        case 'attackStep':
-          setModel({
-            id: -1,
-            name: '',
-            fr_et: '',
-            fr_se: '',
-            fr_koC: '',
-            fr_WoO: '',
-            fr_eq: '',
-            component: null,
-            control: [],
-            prepared_by: [],
-            threat_class: null,
-            project: null,
-          } as AttackStepModel)
-          break
-        case 'threatScenario':
-          setModel({
-            id: -1,
-            name: '',
-            attackStep: null,
-            threat_class: null,
-            project: null,
-          } as ThreatScenarioModel)
-          break
-        case 'damageScenario':
-          setModel({
-            id: -1,
-            name: '',
-            affected_CIA_parts: '',
-            impact_scale: '',
-            safety_impact: '',
-            finantial_impact: '',
-            operational_impact: '',
-            privacy_impact: '',
-            component: null,
-            threat_scenario: null,
-            project: null,
-          } as DamageScenarioModel)
-          break
-        case 'compromise':
-          setModel({
-            id: -1,
-            affected_CIA_parts: '',
-            component: null,
-            threat_scenario: null,
-            project: null,
-          } as CompromisesModel)
-          break
-        default:
-          setModel({
-            id: -1,
-          })
-      }
-      return value
-    })
+  const resetForm = () => {
+    setType('')
+    setModel({ id: -1 })
   }
 
-  const modelForm = { type, item: model }
+  const handleTypeChange = (nextType: ModelType) => {
+    setType(nextType)
+    setModel(createDefaultModel(nextType))
+  }
+
+  const handleClose = () => {
+    setOpen(false)
+    setError('')
+    resetForm()
+  }
+
+  const handleCreate = async () => {
+    if (!type) {
+      return
+    }
+
+    try {
+      setError('')
+      await addItem(type, model)
+      handleClose()
+    } catch (createError) {
+      console.error(createError)
+      setError('Could not save this model to the API.')
+    }
+  }
+
   const setFormModel = (item: ModelFormItem) => {
     setModel(item.item)
   }
 
+  const handleOpen = () => {
+    if (fixedType) {
+      setType(fixedType)
+      setModel(createDefaultModel(fixedType))
+    }
+    setOpen(true)
+  }
+
   return (
-    <Dialog
-      onOpenChange={() => {
-        setType('' as ModelType)
-        setModel({ id: -1 })
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button size="sm" type="button">
-          New
-        </Button>
-      </DialogTrigger>
+    <>
+      <Button size="sm" type="button" onClick={handleOpen}>
+        {label}
+      </Button>
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New Model</DialogTitle>
-          <DialogDescription>Create a new model</DialogDescription>
-        </DialogHeader>
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-background shadow-lg">
+            <div className="px-6 pt-6 pb-4">
+              <div className="text-lg font-semibold">Create {dialogModelLabel}</div>
+              <div className="text-sm text-muted-foreground">
+                Create new {dialogModelLabel}
+              </div>
+            </div>
 
-        <Select onValueChange={setSelectType}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Types</SelectLabel>
-              {types.map((type) => (
-                <SelectItem value={type} key={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+            {fixedType ? null : (
+              <div className="px-6 pb-4">
+                <label className="mb-2 block text-sm font-medium" htmlFor="new-model-type">
+                  Type
+                </label>
+                <select
+                  id="new-model-type"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                  value={type}
+                  onChange={(event) => handleTypeChange(event.target.value as ModelType)}
+                >
+                  <option value="">Select a type</option>
+                  {types.map((itemType) => (
+                    <option key={itemType} value={itemType}>
+                      {itemType}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-        <ModelForm model={modelForm} setModel={setFormModel} />
+            {type ? (
+              <div className="min-h-0 flex-1 overflow-y-auto px-6">
+                <div className="pb-4 pr-3">
+                  <ModelForm
+                    model={{ type, item: model }}
+                    setModel={setFormModel}
+                  />
+                </div>
+              </div>
+            ) : null}
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button disabled={type === ''} onClick={() => addItem(type, model)}>Create</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {error ? (
+              <div className="mx-6 mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
+              <Button variant="outline" type="button" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!type || !hasRequiredName(model)}
+                onClick={handleCreate}
+              >
+                Create
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }

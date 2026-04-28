@@ -44,21 +44,6 @@ function modelStateToTreeItems(state: ModelState): DefinitionTreeNode[] {
   const keys = Object.keys(state) as (keyof ModelState)[]
   return keys.map((key): DefinitionTreeNode => {
     switch (key) {
-      case 'nodes': {
-        const values = [...state[key].values()]
-        return {
-          id: 'nodes',
-          label: 'Nodes',
-          kind: 'main-component',
-          children: values.map(
-            (node): DefinitionTreeNode => ({
-              id: modelToId('node', node),
-              label: node.title,
-              kind: 'sub-component',
-            })
-          ),
-        }
-      }
       case 'technologies': {
         const values = [...state[key].values()]
         return {

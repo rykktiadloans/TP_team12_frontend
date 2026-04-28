@@ -18,10 +18,7 @@ export function CardNode({ data, selected, id }: NodeProps<CardNodeType>) {
 
   const isTarget =
     connection.inProgress && connection.fromNode.id !== id
-
-  const placeholderPercentrage = Math.min(100, data.title.length * 2)
-
-  const placeholderMs = Math.min(100, data.title.length * 4)
+  const metaRows = data.metaRows ?? []
 
   return (
     <Card
@@ -42,16 +39,16 @@ export function CardNode({ data, selected, id }: NodeProps<CardNodeType>) {
           <StatusBadge status={data.modelType} />
         </CardAction>
       </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
-        <div className="flex justify-between">
-          <span>Placeholder A</span>
-          <span>{placeholderPercentrage}%</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Placeholder B</span>
-          <span>{placeholderMs} ms</span>
-        </div>
-      </CardContent>
+      {metaRows.length ? (
+        <CardContent className="space-y-1 text-sm text-muted-foreground">
+          {metaRows.map((row) => (
+            <div key={row.label} className="flex justify-between gap-4">
+              <span>{row.label}</span>
+              <span className="truncate text-right text-foreground">{row.value}</span>
+            </div>
+          ))}
+        </CardContent>
+      ) : null}
       <div className="move-handle">
         <Button>
           <Move />

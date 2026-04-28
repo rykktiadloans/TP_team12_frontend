@@ -1,18 +1,16 @@
-import { useState, useCallback, useMemo } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   type Edge as FlowEdge,
-  type Node as FlowNode,
   Background,
   BackgroundVariant,
   Controls,
   MarkerType,
-  useNodesState,
-  useEdgesState,
-  addEdge,
+  applyNodeChanges,
+  type Node as FlowNode,
   type OnConnect,
-  type NodeMouseHandler,
-  type OnSelectionChangeFunc,
+  type OnNodesChange,
+  type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
@@ -23,28 +21,69 @@ import CustomConnectionLine from './CustomConnectionLine'
 import { useModelStore } from '@/store/model-store'
 import type { ModelType } from '@/types/models'
 import { useSelectedItem } from '@/context/SelectedItemContext'
-import lodashIsequal from 'lodash.isequal'
 
 interface MainCardViewProps {
   nodes: Node[]
   edges: Edge[]
 }
 
-function castNodes(nodes: Node[]): CardNodeType[] {
+type StoredPositions = Record<string, { x: number; y: number }>
+
+function getProjectLayoutKey() {
+  const projectId = sessionStorage.getItem('projectId') ?? 'unknown'
+  return `tpfrontend:graph-layout:${projectId}`
+}
+
+function readStoredPositions(): StoredPositions {
+  try {
+    const raw = localStorage.getItem(getProjectLayoutKey())
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw) as StoredPositions
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeStoredPositions(nodes: FlowNode[]) {
+  try {
+    const positions = Object.fromEntries(
+      nodes.map((node) => [
+        node.id,
+        { x: node.position.x, y: node.position.y },
+      ])
+    )
+    localStorage.setItem(getProjectLayoutKey(), JSON.stringify(positions))
+  } catch {
+    // Ignore localStorage failures so the graph still works.
+  }
+}
+
+function getDefaultPosition(index: number) {
+  const columns = 4
+  const column = index % columns
+  const row = Math.floor(index / columns)
+  return {
+    x: 80 + column * 360,
+    y: 80 + row * 220,
+  }
+}
+
+function castNodes(nodes: Node[], storedPositions: StoredPositions): CardNodeType[] {
   return nodes.map(
-    (node): CardNodeType => ({
+    (node, index): CardNodeType => ({
       id: node.id,
       type: 'cardNode',
       width: 300,
-      position: {
-        x: 0,
-        y: 0,
-      },
+      position: storedPositions[node.id] ?? getDefaultPosition(index),
       dragHandle: '.move-handle',
       data: {
         title: node.title,
         description: node.desc,
         modelType: node.type,
+        metaRows: node.metaRows,
       },
     })
   )
@@ -73,42 +112,98 @@ const connectionLineStyle = {
 }
 
 export function MainCardView({ nodes, edges }: MainCardViewProps) {
-  const { setSelectedItem } = useSelectedItem()
+  const { selectedItem, setSelectedItem } = useSelectedItem()
+  const storeSelectedId = useModelStore((store) => store.selectedId)
+  const focusTargetId = useModelStore((store) => store.focusTargetId)
+  const setStoreSelectedId = useModelStore((store) => store.setSelectedId)
+  const clearFocus = useModelStore((store) => store.clearFocus)
 
   const isConnectable = useModelStore((store) => store.isConnectable)
   const addConnection = useModelStore((store) => store.addConnection)
-  const castedNodes = useMemo(() => castNodes(nodes), [nodes])
-  const castedEdges = useMemo(() => castEdges(edges), [edges])
-  const [flowNodes, setFlowNodes, onFlowNodesChange] =
-    useNodesState(castedNodes)
-  const [flowEdges, setFlowEdges, onFlowEdgesChange] =
-    useEdgesState(castedEdges)
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance<CardNodeType> | null>(null)
+  const storedPositions = useMemo(() => readStoredPositions(), [nodes])
+  const castedNodes = useMemo(
+    () => castNodes(nodes, storedPositions),
+    [nodes, storedPositions]
+  )
+  const flowEdges = useMemo(() => castEdges(edges), [edges])
+  const [flowNodes, setFlowNodes] = useState(castedNodes)
+  const activeSelectedId = selectedItem ?? storeSelectedId ?? ''
 
-  const [prev, setPrev] = useState([
-    castedNodes,
-    castedEdges,
-  ])
+  useEffect(() => {
+    setFlowNodes((currentNodes) => {
+      const currentById = new Map(currentNodes.map((node) => [node.id, node]))
+      const nextNodes = castedNodes.map((node) => {
+        const currentNode = currentById.get(node.id)
+        if (!currentNode) {
+          return node
+        }
 
-  if (!lodashIsequal(prev, [castedNodes, castedEdges])) {
-    const newNodes = castedNodes.map((node, index) => {
-      const same = flowNodes.find((n) => n.id == node.id)
-      node.selected = same?.selected ?? false
-      if (same == undefined) {
-        return node
-      }
-      node.position = same.position
-      return node
+        return {
+          ...node,
+          position: currentNode.position,
+          selected: currentNode.selected,
+          dragging: currentNode.dragging,
+        }
+      })
+
+      return nextNodes
     })
-    setPrev([newNodes, castedEdges])
-    setFlowNodes([...newNodes])
-    setFlowEdges([...castedEdges])
-  }
+  }, [castedNodes])
 
-  const onSelect: OnSelectionChangeFunc<CardNodeType> = (params) => {
-    const node = params.nodes[0] ?? null
-    const id = node ? node.id : null
-    setSelectedItem(id)
-  }
+  useEffect(() => {
+    writeStoredPositions(flowNodes)
+  }, [flowNodes])
+
+  useEffect(() => {
+    setFlowNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.selected === (node.id === activeSelectedId)
+          ? node
+          : { ...node, selected: node.id === activeSelectedId }
+      )
+    )
+  }, [activeSelectedId])
+
+  useEffect(() => {
+    if (!focusTargetId || !reactFlowInstance) {
+      return
+    }
+
+    const selectedNode = flowNodes.find((node) => node.id === focusTargetId)
+    if (!selectedNode) {
+      return
+    }
+
+    reactFlowInstance.setCenter(
+      selectedNode.position.x + 150,
+      selectedNode.position.y + 80,
+      { duration: 250, zoom: Math.max(reactFlowInstance.getZoom(), 0.9) }
+    )
+    clearFocus()
+  }, [clearFocus, flowNodes, focusTargetId, reactFlowInstance])
+
+  const selectId = useCallback(
+    (id: string | null) => {
+      const normalizedId = id ?? ''
+      if ((selectedItem ?? '') === normalizedId && storeSelectedId === normalizedId) {
+        return
+      }
+      startTransition(() => {
+        setSelectedItem(id)
+      })
+      setStoreSelectedId(normalizedId)
+    },
+    [selectedItem, setSelectedItem, setStoreSelectedId, storeSelectedId]
+  )
+
+  const onNodesChange = useCallback<OnNodesChange<CardNodeType>>(
+    (changes) => {
+      setFlowNodes((currentNodes) => applyNodeChanges(changes, currentNodes))
+    },
+    []
+  )
 
   const onConnect = useCallback<OnConnect>(
     (params) => {
@@ -122,36 +217,37 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
           toType as ModelType
         )
       ) {
-        setFlowEdges((eds) => addEdge(params, eds))
-        addConnection(
+        void addConnection(
           +fromId,
           fromType as ModelType,
           +toId,
           toType as ModelType
-        )
+        ).catch((error) => {
+          console.error(error)
+        })
       }
     },
-    [addConnection, isConnectable, setFlowEdges]
+    [addConnection, isConnectable]
   )
 
-  const nodeTypes = useCallback(() => ({ cardNode: CardNode }), [])
-
-  const edgeTypes = useCallback(() => ({ floating: FloatingEdge }), [])
+  const nodeTypes = useMemo(() => ({ cardNode: CardNode }), [])
+  const edgeTypes = useMemo(() => ({ floating: FloatingEdge }), [])
 
   return (
     <div className="h-full w-full">
       <ReactFlow
-        nodeTypes={nodeTypes()}
-        edgeTypes={edgeTypes()}
+        onInit={setReactFlowInstance}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onFlowNodesChange}
-        onEdgesChange={onFlowEdgesChange}
+        onNodesChange={onNodesChange}
         onConnect={onConnect}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineComponent={CustomConnectionLine}
         connectionLineStyle={connectionLineStyle}
-        onSelectionChange={onSelect}
+        onNodeClick={(_, node) => selectId(node.id)}
+        onPaneClick={() => selectId(null)}
         connectOnClick={false}
         fitView
       >
