@@ -1,10 +1,10 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
-import { FileDown, GitBranch, Table2 } from 'lucide-react'
+import { Bot, FileDown, GitBranch, Table2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { ControlGroupManager } from '@/components/control-groups/ControlGroupManager'
 import { api } from '@/lib/api'
 
-export type ProjectViewMode = 'graph' | 'table'
+export type ProjectViewMode = 'graph' | 'table' | 'assistants'
 
 interface ToolbarProps {
   viewMode: ProjectViewMode
@@ -57,6 +57,15 @@ export default function Toolbar({ viewMode, onViewModeChange }: ToolbarProps) {
       >
         <Table2 />
         TABLE VIEW
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={viewMode === 'assistants' ? 'default' : 'outline'}
+        onClick={() => onViewModeChange('assistants')}
+      >
+        <Bot />
+        ASSISTANTS
       </Button>
 
       <div className="ml-auto flex items-center gap-2">
