@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Button } from '@/components/ui/button'
 import { MainCardView } from '../cards/MainCardView'
 import {
   keyToModelType,
@@ -7,7 +6,19 @@ import {
   useModelStore,
   type ModelState,
 } from '@/store/model-store'
-import type { Model, ModelType } from '@/types/models'
+import { formatCIAFlags } from '@/lib/tara'
+import { getName } from '@/lib/modelName'
+import type {
+  AttackStepModel,
+  ComponentModel,
+  CompromisesModel,
+  ControlModel,
+  DamageScenarioModel,
+  DataEntityModel,
+  Model,
+  ModelType,
+  ThreatScenarioModel,
+} from '@/types/models'
 import { NewModelButton } from '../new-model/NewModelButton'
 
 export type Node = {
@@ -15,6 +26,10 @@ export type Node = {
   title: string
   desc?: string
   type: ModelType
+  metaRows?: Array<{
+    label: string
+    value: string
+  }>
   // "kinda grid but not really" positions (px) in a big canvas
 }
 
@@ -54,13 +69,6 @@ export function MainCardsWindow() {
   )
 }
 
-export function getName(model: Model): string {
-  if ('name' in model) {
-    return String(model.name)
-  }
-  return 'Compromise ' + model.id
-}
-
 const GRAPH_EXCLUDED_KEYS: Array<keyof ModelState> = ['cybersecurityGoals']
 
 function stateToNodes(state: ModelState): Node[] {
@@ -69,22 +77,26 @@ function stateToNodes(state: ModelState): Node[] {
       if (GRAPH_EXCLUDED_KEYS.includes(name as keyof ModelState)) return []
       const key = keyToModelType(name as keyof ModelState)
       const models = [...map.values()].map((model): Node => {
-      const name = getName(model)
+        const name = getName(model)
 
-      let desc = null
-      if ('description' in model) {
-        desc = model.description
-      }
+        let desc = null
+        if ('description' in model) {
+          desc = model.description
+        }
 
-      const node = {
-        id: modelToId(key, model),
-        title: name,
+        const node = {
+          id: modelToId(key, model),
+          title: name,
           desc: desc,
           type: key,
+          metaRows: getNodeMetaRows(key, model, state),
         } as Node
 
         if (desc == null) {
           delete node.desc
+        }
+        if (!node.metaRows?.length) {
+          delete node.metaRows
         }
 
         return node
@@ -95,6 +107,127 @@ function stateToNodes(state: ModelState): Node[] {
   )
 
   return nodes
+}
+
+function countLabel(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`
+}
+
+function modelLabel<T extends Model & { name?: string }>(
+  id: number | null | undefined,
+  map: Map<number, T>,
+  fallback: string
+) {
+  if (id == null) {
+    return 'None'
+  }
+
+  const model = map.get(id)
+  return model?.name || `${fallback} ${id}`
+}
+
+function getNodeMetaRows(
+  type: ModelType,
+  model: Model,
+  state: ModelState
+): Node['metaRows'] {
+  switch (type) {
+    case 'component': {
+      const component = model as ComponentModel
+      return [
+        {
+          label: 'Communicates',
+          value: countLabel(component.communicates_with?.length ?? 0, 'component'),
+        },
+        {
+          label: 'Technologies',
+          value: countLabel(component.technology?.length ?? 0, 'technology', 'technologies'),
+        },
+      ]
+    }
+    case 'dataEntity': {
+      const dataEntity = model as DataEntityModel
+      return [
+        {
+          label: 'Component',
+          value: modelLabel(dataEntity.component, state.components, 'Component'),
+        },
+        {
+          label: 'Technologies',
+          value: countLabel(dataEntity.technology?.length ?? 0, 'technology', 'technologies'),
+        },
+      ]
+    }
+    case 'control': {
+      const control = model as ControlModel
+      return [
+        {
+          label: 'Component',
+          value: modelLabel(control.component, state.components, 'Component'),
+        },
+        {
+          label: 'Mitigates',
+          value: countLabel(control.attack_steps?.length ?? 0, 'attack step'),
+        },
+      ]
+    }
+    case 'attackStep': {
+      const attackStep = model as AttackStepModel
+      return [
+        {
+          label: 'Component',
+          value: modelLabel(attackStep.component, state.components, 'Component'),
+        },
+        {
+          label: 'Threats',
+          value: countLabel(attackStep.threat_scenarios?.length ?? 0, 'scenario'),
+        },
+      ]
+    }
+    case 'threatScenario': {
+      const threatScenario = model as ThreatScenarioModel
+      return [
+        {
+          label: 'Components',
+          value: countLabel(threatScenario.components?.length ?? 0, 'component'),
+        },
+        {
+          label: 'Damage',
+          value: countLabel(threatScenario.damage_scenarios?.length ?? 0, 'scenario'),
+        },
+      ]
+    }
+    case 'damageScenario': {
+      const damageScenario = model as DamageScenarioModel
+      return [
+        {
+          label: 'CIA',
+          value: formatCIAFlags(damageScenario.affected_CIA_parts),
+        },
+        {
+          label: 'IL',
+          value: damageScenario.il_label
+            ? `${damageScenario.il_label} (${damageScenario.il ?? 0})`
+            : String(damageScenario.il ?? 0),
+        },
+      ]
+    }
+    case 'compromise': {
+      const compromise = model as CompromisesModel
+      return [
+        {
+          label: 'CIA',
+          value: formatCIAFlags(compromise.compromised_CIA_part),
+        },
+        {
+          label: 'Component',
+          value: modelLabel(compromise.component, state.components, 'Component'),
+        },
+      ]
+    }
+    default:
+      return []
+  }
 }
 
 function stateToEdges(state: ModelState): Edge[] {

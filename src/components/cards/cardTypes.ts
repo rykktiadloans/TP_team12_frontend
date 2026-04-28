@@ -7,4 +7,8 @@ export type CardNodeType = Node<{
   title: string
   description?: string
   modelType: ModelType
+  metaRows?: Array<{
+    label: string
+    value: string
+  }>
 }, 'cardNode'>

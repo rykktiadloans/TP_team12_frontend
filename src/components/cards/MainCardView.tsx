@@ -83,6 +83,7 @@ function castNodes(nodes: Node[], storedPositions: StoredPositions): CardNodeTyp
         title: node.title,
         description: node.desc,
         modelType: node.type,
+        metaRows: node.metaRows,
       },
     })
   )

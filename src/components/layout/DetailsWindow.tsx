@@ -10,7 +10,7 @@ import {
   useModelStore,
   type ModelState,
 } from '@/store/model-store'
-import { getName } from './MainCardsWindow'
+import { getName } from '@/lib/modelName'
 import { ModelForm } from '../details/ModelForm'
 import type { Model, ModelType } from '@/types/models'
 import { Button } from '../ui/button'

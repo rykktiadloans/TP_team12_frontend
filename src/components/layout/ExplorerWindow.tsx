@@ -34,7 +34,7 @@ import { useSelectedItem } from '@/context/SelectedItemContext'
 import type { ComponentModel, Model, ModelType } from '@/types/models'
 import { createDefaultModel, hasRequiredName } from '@/lib/modelFactory'
 import { ModelForm } from '../details/ModelForm'
-import { getName } from './MainCardsWindow'
+import { getName } from '@/lib/modelName'
 
 function matchesFilter(node: TreeNode, q: string): boolean {
   if (!q.trim()) return true

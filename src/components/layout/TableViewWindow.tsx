@@ -41,7 +41,7 @@ import {
   type AttackFeasibilityRating,
   type Option,
 } from '@/lib/tara'
-import { getName } from './MainCardsWindow'
+import { getName } from '@/lib/modelName'
 
 interface TableViewWindowProps {
   activeTable: TaraTableKey
