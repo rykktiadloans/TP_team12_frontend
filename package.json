@@ -11,6 +11,7 @@
     "shadcn:add": "npx shadcn@latest add"
   },
   "dependencies": {
+    "@base-ui/react": "^1.4.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-context-menu": "^2.2.16",

@@ -1,4 +1,10 @@
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   ReactFlow,
   type Edge as FlowEdge,
@@ -11,6 +17,7 @@ import {
   type OnConnect,
   type OnNodesChange,
   type ReactFlowInstance,
+  ControlButton,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { Edge, Node } from '../layout/MainCardsWindow'
@@ -21,6 +28,28 @@ import CustomConnectionLine from './CustomConnectionLine'
 import { useModelStore } from '@/store/model-store'
 import type { ModelType } from '@/types/models'
 import { useSelectedItem } from '@/context/SelectedItemContext'
+import { ListFilter, Search } from 'lucide-react'
+import {
+  DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '../ui/dropdown-menu'
+import { Input } from '../ui/input'
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '../ui/combobox'
+import { Textarea } from '../ui/textarea'
 
 interface MainCardViewProps {
   nodes: Node[]
@@ -50,10 +79,7 @@ function readStoredPositions(): StoredPositions {
 function writeStoredPositions(nodes: FlowNode[]) {
   try {
     const positions = Object.fromEntries(
-      nodes.map((node) => [
-        node.id,
-        { x: node.position.x, y: node.position.y },
-      ])
+      nodes.map((node) => [node.id, { x: node.position.x, y: node.position.y }])
     )
     localStorage.setItem(getProjectLayoutKey(), JSON.stringify(positions))
   } catch {
@@ -71,7 +97,10 @@ function getDefaultPosition(index: number) {
   }
 }
 
-function castNodes(nodes: Node[], storedPositions: StoredPositions): CardNodeType[] {
+function castNodes(
+  nodes: Node[],
+  storedPositions: StoredPositions
+): CardNodeType[] {
   return nodes.map(
     (node, index): CardNodeType => ({
       id: node.id,
@@ -131,26 +160,59 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const [flowNodes, setFlowNodes] = useState(castedNodes)
   const activeSelectedId = selectedItem ?? storeSelectedId ?? ''
 
+  const [filterBy, setFilterBy] = useState('')
+
+  const filterableTypes = useCallback(
+    () => [
+      'technology',
+      'component',
+      'dataEntity',
+      'control',
+      'threatClass',
+      'attackStep',
+      'threatScenario',
+      'damageScenario',
+      'compromise',
+    ],
+    []
+  )
+  const [filterType, setFilterType] = useState([] as string[])
+
   useEffect(() => {
     setFlowNodes((currentNodes) => {
       const currentById = new Map(currentNodes.map((node) => [node.id, node]))
-      const nextNodes = castedNodes.map((node) => {
-        const currentNode = currentById.get(node.id)
-        if (!currentNode) {
-          return node
-        }
+      const nextNodes = castedNodes
+        .map((node) => {
+          const currentNode = currentById.get(node.id)
+          if (!currentNode) {
+            return node
+          }
 
-        return {
-          ...node,
-          position: currentNode.position,
-          selected: currentNode.selected,
-          dragging: currentNode.dragging,
-        }
-      })
+          return {
+            ...node,
+            position: currentNode.position,
+            selected: currentNode.selected,
+            dragging: currentNode.dragging,
+          }
+        })
+        .filter((node) => {
+          if (filterBy.length < 1 && filterType.length < 1) {
+            return true
+          }
+
+          const isInName =
+            node.data.title
+              .toLocaleLowerCase()
+              .search(filterBy.toLocaleLowerCase()) != -1
+          const isInTypes =
+            filterType.length < 1 || filterType.includes(node.data.modelType)
+
+          return isInName && isInTypes
+        })
 
       return nextNodes
     })
-  }, [castedNodes])
+  }, [castedNodes, filterBy, filterType])
 
   useEffect(() => {
     writeStoredPositions(flowNodes)
@@ -158,7 +220,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
 
   useEffect(() => {
     setFlowNodes((currentNodes) =>
-      currentNodes.map((node) =>
+      castedNodes.map((node) =>
         node.selected === (node.id === activeSelectedId)
           ? node
           : { ...node, selected: node.id === activeSelectedId }
@@ -187,7 +249,10 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const selectId = useCallback(
     (id: string | null) => {
       const normalizedId = id ?? ''
-      if ((selectedItem ?? '') === normalizedId && storeSelectedId === normalizedId) {
+      if (
+        (selectedItem ?? '') === normalizedId &&
+        storeSelectedId === normalizedId
+      ) {
         return
       }
       startTransition(() => {
@@ -198,12 +263,9 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
     [selectedItem, setSelectedItem, setStoreSelectedId, storeSelectedId]
   )
 
-  const onNodesChange = useCallback<OnNodesChange<CardNodeType>>(
-    (changes) => {
-      setFlowNodes((currentNodes) => applyNodeChanges(changes, currentNodes))
-    },
-    []
-  )
+  const onNodesChange = useCallback<OnNodesChange<CardNodeType>>((changes) => {
+    setFlowNodes((currentNodes) => applyNodeChanges(changes, currentNodes))
+  }, [])
 
   const onConnect = useCallback<OnConnect>(
     (params) => {
@@ -251,7 +313,53 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
         connectOnClick={false}
         fitView
       >
-        <Controls />
+        <Controls>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <ControlButton>
+                <ListFilter />
+              </ControlButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="end">
+              <DropdownMenuLabel>Filter</DropdownMenuLabel>
+              <Input
+                id="node-filter"
+                placeholder="Filter by Name"
+                value={filterBy}
+                onChange={(event) => setFilterBy(event.target.value)}
+              />
+              <DropdownMenuSeparator />
+              <Combobox
+                items={filterableTypes()}
+                multiple
+                value={filterType}
+                onValueChange={setFilterType}
+                autoHighlight
+              >
+                <ComboboxChips>
+                  <div className="flex flex-wrap max-w-52">
+                    <ComboboxValue>
+                      {filterType.map((item) => (
+                        <ComboboxChip key={item}>{item}</ComboboxChip>
+                      ))}
+                    </ComboboxValue>
+                  </div>
+                  <ComboboxChipsInput placeholder="Filter by Type" />
+                </ComboboxChips>
+                <ComboboxContent>
+                  <ComboboxEmpty>No types selected</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Controls>
         <Background
           variant={BackgroundVariant.Dots}
           color="#808080"
