@@ -56,7 +56,7 @@ export function createDefaultModel(type: ModelType): Model {
         project: null,
       } as ControlModel
     case 'threatClass':
-      return { id: -1, name: '', description: '', project: null } as ThreatClassModel
+      return { id: -1, name: '', description: '', mitre_tactic_id: '', mitre_tactic_name: '', project: null } as ThreatClassModel
     case 'attackStep':
       return {
         id: -1,
@@ -73,6 +73,8 @@ export function createDefaultModel(type: ModelType): Model {
         previous_steps: [],
         threat_scenarios: [],
         threat_class: null,
+        mitre_technique_id: '',
+        mitre_technique_name: '',
         attack_potential_points: null,
         attack_potential: null,
         afl: null,

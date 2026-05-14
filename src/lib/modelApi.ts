@@ -8,6 +8,7 @@ import type {
   Model,
   ModelType,
   TechnologyModel,
+  ThreatClassModel,
   ThreatScenarioModel,
 } from '@/types/models'
 
@@ -19,6 +20,7 @@ const endpointByType: Partial<Record<ModelType, string>> = {
   threatScenario: '/threat_scenario/',
   damageScenario: '/damage_scenario/',
   cybersecurityGoal: '/cybersecurity_goal/',
+  threatClass: '/threat_class/',
 }
 
 export function supportsApiCreateType(type: ModelType) {
@@ -104,6 +106,18 @@ function toApiPayload(type: ModelType, model: Model) {
         threat_class: attackStep.threat_class,
         threat_scenarios: attackStep.threat_scenarios ?? [],
         controls: attackStep.controls ?? [],
+        mitre_technique_id: attackStep.mitre_technique_id ?? '',
+        mitre_technique_name: attackStep.mitre_technique_name ?? '',
+        project_id: projectId,
+      }
+    }
+    case 'threatClass': {
+      const threatClass = model as ThreatClassModel
+      return {
+        name: threatClass.name,
+        description: threatClass.description,
+        mitre_tactic_id: threatClass.mitre_tactic_id ?? '',
+        mitre_tactic_name: threatClass.mitre_tactic_name ?? '',
         project_id: projectId,
       }
     }
@@ -204,6 +218,8 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         previous_steps: data.previous_steps ?? [],
         threat_scenarios: data.threat_scenarios ?? [],
         threat_class: data.threat_class ?? null,
+        mitre_technique_id: data.mitre_technique_id ?? '',
+        mitre_technique_name: data.mitre_technique_name ?? '',
         attack_potential_points: data.attack_potential_points ?? null,
         attack_potential: data.attack_potential ?? null,
         afl: data.afl ?? null,
@@ -248,6 +264,15 @@ export function normalizeApiModel(type: ModelType, data: any): Model {
         controls: data.controls ?? [],
         project: data.project ?? null,
       } as CybersecurityGoalModel
+    case 'threatClass':
+      return {
+        id: data.id,
+        name: data.name ?? '',
+        description: data.description ?? '',
+        mitre_tactic_id: data.mitre_tactic_id ?? '',
+        mitre_tactic_name: data.mitre_tactic_name ?? '',
+        project: data.project ?? null,
+      } as ThreatClassModel
     default:
       return data as Model
   }

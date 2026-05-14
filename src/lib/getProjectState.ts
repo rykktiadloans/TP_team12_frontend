@@ -64,6 +64,7 @@ export async function getProjectState(
     controls,
     controlClasses,
     controlGroups,
+    threatClasses,
     attackSteps,
     threatScenariosRaw,
     damageScenariosRaw,
@@ -74,6 +75,7 @@ export async function getProjectState(
     getList<ControlModel>('/control/', projectId),
     getGlobalList<ControlClassModel>('/control_class/'),
     getList<ControlGroupModel>('/control_group/', projectId),
+    getList<ThreatClassModel>('/threat_class/', projectId),
     getList<AttackStepModel>('/attack_step/', projectId),
     getList<Partial<ThreatScenarioModel>>('/threat_scenario/', projectId),
     getList<DamageScenarioModel>('/damage_scenario/', projectId),
@@ -153,7 +155,11 @@ export async function getProjectState(
       afl: control.afl ?? null,
       afl_value: control.afl_value ?? null,
     })),
-    threatClasses: [],
+    threatClasses: threatClasses.map((tc) => ({
+      ...tc,
+      mitre_tactic_id: tc.mitre_tactic_id ?? '',
+      mitre_tactic_name: tc.mitre_tactic_name ?? '',
+    })),
     attackSteps: attackSteps.map((step) => ({
       ...step,
       description: step.description ?? '',

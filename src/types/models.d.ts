@@ -73,6 +73,8 @@ export interface ControlModel extends Model {
 export interface ThreatClassModel extends Model{
   name: string
   description: string
+  mitre_tactic_id: string
+  mitre_tactic_name: string
   project: number | null
 }
 
@@ -90,6 +92,8 @@ export interface AttackStepModel extends Model{
   previous_steps: number[]
   threat_scenarios: number[]
   threat_class: number | null
+  mitre_technique_id: string
+  mitre_technique_name: string
   attack_potential_points?: number | null
   attack_potential?: string | null
   afl?: string | null

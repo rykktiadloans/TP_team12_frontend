@@ -14,7 +14,7 @@ import type {
 } from '@/types/models'
 import { Field, FieldGroup, FieldLabel } from '../ui/field'
 import { Input } from '../ui/input'
-import type { ChangeEventHandler } from 'react'
+import { useState, useEffect, type ChangeEventHandler } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { AlertCircleIcon } from 'lucide-react'
 import {
@@ -36,6 +36,20 @@ import {
   type Option,
 } from '@/lib/tara'
 import { useModelStore } from '@/store/model-store'
+import {
+  fetchMitreTactics,
+  fetchMitreTechniques,
+  type MitreTactic,
+  type MitreTechnique,
+} from '@/lib/mitreApi'
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from '../ui/combobox'
 
 export interface ModelFormItem {
   type: ModelType
@@ -310,6 +324,14 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
   useModelStore((store) => store.activeControlGroupId) // re-render when group changes
   const addConnection = useModelStore((store) => store.addConnection)
   const deleteConnection = useModelStore((store) => store.deleteConnection)
+
+  const [mitreTactics, setMitreTactics] = useState<MitreTactic[]>([])
+  const [mitreTechniques, setMitreTechniques] = useState<MitreTechnique[]>([])
+
+  useEffect(() => {
+    fetchMitreTactics().then(setMitreTactics).catch((e) => console.error('MITRE tactics fetch failed:', e))
+    fetchMitreTechniques().then(setMitreTechniques).catch((e) => console.error('MITRE techniques fetch failed:', e))
+  }, [])
 
   if (model.type == 'technology') {
     const technology = model.item as TechnologyModel
@@ -601,6 +623,17 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       threatClass.description = event.target.value
       setModel({ type: model.type, item: {...threatClass} })
     }
+    const setMitreTactic = (tacticId: string) => {
+      const tactic = mitreTactics.find(t => t.id === tacticId) ?? null
+      setModel({
+        type: model.type,
+        item: {
+          ...threatClass,
+          mitre_tactic_id: tactic?.id ?? '',
+          mitre_tactic_name: tactic?.name ?? '',
+        } as ThreatClassModel,
+      })
+    }
     return (
       <form>
         <FieldGroup>
@@ -621,6 +654,32 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               value={threatClass.description}
               onChange={setDescription}
             />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="threat-class-mitre-tactic">MITRE ATT&amp;CK Tactic</FieldLabel>
+            <div className="flex gap-2 items-center">
+              <select
+                id="threat-class-mitre-tactic"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+                value={threatClass.mitre_tactic_id}
+                onChange={(e) => setMitreTactic(e.target.value)}
+              >
+                <option value="">{mitreTactics.length === 0 ? 'Loading…' : '— None —'}</option>
+                {mitreTactics.map((t) => (
+                  <option key={t.id} value={t.id}>{t.id} — {t.name}</option>
+                ))}
+              </select>
+              {threatClass.mitre_tactic_id && (
+                <a
+                  href={`https://attack.mitre.org/tactics/${threatClass.mitre_tactic_id}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-500 hover:underline whitespace-nowrap"
+                >
+                  View
+                </a>
+              )}
+            </div>
           </Field>
         </FieldGroup>
       </form>
@@ -657,6 +716,17 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
       attackStep.required_access = event.target.value
       setModel({ type: model.type, item: {...attackStep} })
     }
+    const setMitreTechnique = (technique: MitreTechnique | null) => {
+      setModel({
+        type: model.type,
+        item: {
+          ...attackStep,
+          mitre_technique_id: technique?.id ?? '',
+          mitre_technique_name: technique?.name ?? '',
+        } as AttackStepModel,
+      })
+    }
+    const selectedTechnique = mitreTechniques.find(t => t.id === attackStep.mitre_technique_id) ?? null
     const setFrEt: ChangeEventHandler<HTMLSelectElement> = (event) => {
       attackStep.fr_et = asNumber(event.target.value)
       setModel({ type: model.type, item: {...attackStep} })
@@ -760,6 +830,46 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               value={attackStep.required_access}
               onChange={setRequiredAccess}
             />
+          </Field>
+          <Field>
+            <FieldLabel>MITRE ATT&amp;CK Technique</FieldLabel>
+            <div className="flex gap-2 items-center">
+              <Combobox
+                items={mitreTechniques}
+                value={selectedTechnique}
+                onValueChange={(val) => setMitreTechnique(val as MitreTechnique | null)}
+                itemToStringLabel={(item) => item ? `${item.id} — ${item.name}` : ''}
+                isItemEqualToValue={(a, b) => a.id === b.id}
+                className="w-full"
+              >
+                <ComboboxInput
+                  showClear={!!selectedTechnique}
+                  placeholder={mitreTechniques.length === 0 ? 'Loading…' : 'Search techniques…'}
+                  className="w-full"
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>No techniques found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item: MitreTechnique) => (
+                      <ComboboxItem key={item.id} value={item}>
+                        <span className="font-mono text-xs text-muted-foreground w-14 shrink-0">{item.id}</span>
+                        <span>{item.name}</span>
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              {attackStep.mitre_technique_id && (
+                <a
+                  href={`https://attack.mitre.org/techniques/${attackStep.mitre_technique_id}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-500 hover:underline whitespace-nowrap"
+                >
+                  View
+                </a>
+              )}
+            </div>
           </Field>
           <Field>
             <FieldLabel htmlFor="attack-step-previous-steps">Previous Steps</FieldLabel>
@@ -934,6 +1044,26 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               value={threatScenario.description}
               onChange={setDescription}
             />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="threat-scenario-threat-class">Threat Class</FieldLabel>
+            <select
+              id="threat-scenario-threat-class"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
+              value={threatScenario.threat_class ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                setModel({
+                  type: model.type,
+                  item: { ...threatScenario, threat_class: val === '' ? null : Number(val) } as ThreatScenarioModel,
+                })
+              }}
+            >
+              <option value="">— None —</option>
+              {[...state.threatClasses.values()].map((tc) => (
+                <option key={tc.id} value={tc.id}>{tc.name || `Threat Class ${tc.id}`}</option>
+              ))}
+            </select>
           </Field>
           <Field>
             <FieldLabel htmlFor="threat-scenario-components">Involved Components</FieldLabel>
