@@ -139,6 +139,9 @@ function safeName(
 }
 
 function leafFromIdRef(label: string, id: string | number): TreeNode {
+  if (typeof id == 'object') {
+    id = (id as any).id
+  }
   const modelTypes = {
     Control: 'control',
     'Attack Step': 'attackStep',

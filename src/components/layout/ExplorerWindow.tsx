@@ -103,12 +103,12 @@ function mergeLocalComponentsIntoTree(
 }
 
 function TreeItem({
-                    node,
-                    depth = 0,
-                    onSelect,
-                    selectedId,
-                    filter,
-                  }: {
+  node,
+  depth = 0,
+  onSelect,
+  selectedId,
+  filter,
+}: {
   node: TreeNode
   depth?: number
   onSelect?: (id: string) => void
@@ -153,7 +153,9 @@ function TreeItem({
             size="icon"
             className="h-8 w-8 shrink-0"
             style={{ marginLeft: paddingLeft }}
-            aria-label={open ? `Collapse ${node.label}` : `Expand ${node.label}`}
+            aria-label={
+              open ? `Collapse ${node.label}` : `Expand ${node.label}`
+            }
           >
             {open ? (
               <ChevronDown className="h-4 w-4 opacity-60" />
@@ -255,7 +257,10 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
     const currentNumericId = Number(currentId)
 
     return getModelsForType(creatorType, modelState)
-      .filter((candidate) => candidate.id !== currentNumericId || creatorType !== selectedType)
+      .filter(
+        (candidate) =>
+          candidate.id !== currentNumericId || creatorType !== selectedType
+      )
       .filter((candidate) =>
         isConnectable(currentNumericId, selectedType, candidate.id, creatorType)
       )
@@ -306,7 +311,8 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
       return
     }
     setExistingTargetId((current) =>
-      current && existingCandidates.some((candidate) => candidate.id === current)
+      current &&
+      existingCandidates.some((candidate) => candidate.id === current)
         ? current
         : existingCandidates[0].id
     )
@@ -322,7 +328,12 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
     try {
       setCreatorError('')
       const createdModel = await addItem(creatorType, creatorModel)
-      await addConnection(+currentId, selectedType, createdModel.id, creatorType)
+      await addConnection(
+        +currentId,
+        selectedType,
+        createdModel.id,
+        creatorType
+      )
       const nextId = modelToId(creatorType, createdModel)
       setStoreSelectedId(nextId)
       selected.setSelectedItem(nextId)
@@ -344,7 +355,12 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
   ])
 
   const handleConnectExisting = React.useCallback(async () => {
-    if (!existingTargetId || !activeSelectedId || !selectedType || !creatorType) {
+    if (
+      !existingTargetId ||
+      !activeSelectedId ||
+      !selectedType ||
+      !creatorType
+    ) {
       return
     }
 
@@ -377,13 +393,13 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
       <div className="px-3 pt-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Filter tree..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="pl-10"
-          />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Filter tree..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="pl-10"
+            />
           </div>
           {selectedItem && relatedCreateTypes.length ? (
             <Button
@@ -409,7 +425,8 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
           <div className="p-3 text-sm text-destructive">{error}</div>
         ) : visibleTree.length === 0 ? (
           <div className="p-3 text-sm text-muted-foreground">
-            No components yet. Create a component to start building the project tree.
+            No components yet. Create a component to start building the project
+            tree.
           </div>
         ) : (
           <div className="space-y-1">
@@ -432,19 +449,25 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
             <div className="px-6 pt-6 pb-4">
               <div className="text-lg font-semibold">Add Related Model</div>
               <div className="text-sm text-muted-foreground">
-                Create a new model and connect it to {selectedItem ? getName(selectedItem) : 'the selected item'}.
+                Create a new model and connect it to{' '}
+                {selectedItem ? getName(selectedItem) : 'the selected item'}.
               </div>
             </div>
 
             <div className="px-6 pb-4">
-              <label className="mb-2 block text-sm font-medium" htmlFor="explorer-related-model-type">
+              <label
+                className="mb-2 block text-sm font-medium"
+                htmlFor="explorer-related-model-type"
+              >
                 Type
               </label>
               <select
                 id="explorer-related-model-type"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
                 value={creatorType}
-                onChange={(event) => handleCreatorTypeChange(event.target.value as ModelType)}
+                onChange={(event) =>
+                  handleCreatorTypeChange(event.target.value as ModelType)
+                }
               >
                 <option value="">Select a related type</option>
                 {relatedCreateTypes.map((itemType) => (
@@ -459,13 +482,17 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
               <div className="space-y-4 pb-4 pr-3">
                 {creatorType ? (
                   <div className="rounded-md border border-border p-3">
-                    <div className="mb-2 text-sm font-medium">Pick Existing</div>
+                    <div className="mb-2 text-sm font-medium">
+                      Pick Existing
+                    </div>
                     {existingCandidates.length ? (
                       <div className="flex gap-2">
                         <select
                           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none"
                           value={existingTargetId}
-                          onChange={(event) => setExistingTargetId(event.target.value)}
+                          onChange={(event) =>
+                            setExistingTargetId(event.target.value)
+                          }
                         >
                           {existingCandidates.map((candidate) => (
                             <option key={candidate.id} value={candidate.id}>
@@ -484,7 +511,9 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
                       </div>
                     ) : (
                       <div className="text-sm text-muted-foreground">
-                        No existing {formatModelTypeLabel(creatorType).toLowerCase()} can be connected here right now.
+                        No existing{' '}
+                        {formatModelTypeLabel(creatorType).toLowerCase()} can be
+                        connected here right now.
                       </div>
                     )}
                   </div>
@@ -509,7 +538,11 @@ export function ExplorerWindow({ projectId }: ExplorerWindowProps) {
             ) : null}
 
             <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
-              <Button variant="outline" type="button" onClick={handleCloseCreator}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={handleCloseCreator}
+              >
                 Cancel
               </Button>
               <Button

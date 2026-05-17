@@ -50,51 +50,11 @@ import {
   useComboboxAnchor,
 } from '../ui/combobox'
 import { Textarea } from '../ui/textarea'
+import { getDefaultPosition, readStoredPositions, writeStoredPositions, type StoredPositions } from './layout'
 
 interface MainCardViewProps {
   nodes: Node[]
   edges: Edge[]
-}
-
-type StoredPositions = Record<string, { x: number; y: number }>
-
-function getProjectLayoutKey() {
-  const projectId = sessionStorage.getItem('projectId') ?? 'unknown'
-  return `tpfrontend:graph-layout:${projectId}`
-}
-
-function readStoredPositions(): StoredPositions {
-  try {
-    const raw = localStorage.getItem(getProjectLayoutKey())
-    if (!raw) {
-      return {}
-    }
-    const parsed = JSON.parse(raw) as StoredPositions
-    return parsed && typeof parsed === 'object' ? parsed : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeStoredPositions(nodes: FlowNode[]) {
-  try {
-    const positions = Object.fromEntries(
-      nodes.map((node) => [node.id, { x: node.position.x, y: node.position.y }])
-    )
-    localStorage.setItem(getProjectLayoutKey(), JSON.stringify(positions))
-  } catch {
-    // Ignore localStorage failures so the graph still works.
-  }
-}
-
-function getDefaultPosition(index: number) {
-  const columns = 4
-  const column = index % columns
-  const row = Math.floor(index / columns)
-  return {
-    x: 80 + column * 360,
-    y: 80 + row * 220,
-  }
 }
 
 function castNodes(
@@ -151,7 +111,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const addConnection = useModelStore((store) => store.addConnection)
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<CardNodeType> | null>(null)
-  const storedPositions = useMemo(() => readStoredPositions(), [nodes])
+  const storedPositions = useMemo(() => readStoredPositions(), [])
   const castedNodes = useMemo(
     () => castNodes(nodes, storedPositions),
     [nodes, storedPositions]
@@ -219,14 +179,14 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   }, [flowNodes])
 
   useEffect(() => {
-    setFlowNodes((currentNodes) =>
-      castedNodes.map((node) =>
+    setFlowNodes((flowNodes) =>
+      flowNodes.map((node) =>
         node.selected === (node.id === activeSelectedId)
           ? node
           : { ...node, selected: node.id === activeSelectedId }
       )
     )
-  }, [activeSelectedId])
+  }, [activeSelectedId, castedNodes])
 
   useEffect(() => {
     if (!focusTargetId || !reactFlowInstance) {
