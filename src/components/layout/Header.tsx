@@ -15,8 +15,8 @@ import {
   type StoredPositions,
 } from '../cards/layout'
 import { useRef, type ChangeEventHandler } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
-import { HelpContent } from '@/lib/help'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog'
+import { HelpContent } from '@/components/layout/HelpContent'
 
 export default function Header() {
   const flow = useReactFlow()
@@ -93,6 +93,7 @@ export default function Header() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Help</DialogTitle>
+              <DialogDescription>How to use IA-TARA</DialogDescription>
             </DialogHeader>
             <div className="-mx-4 no-scrollbar max-h-[50vh] overflow-y-auto px-4">
               <HelpContent />

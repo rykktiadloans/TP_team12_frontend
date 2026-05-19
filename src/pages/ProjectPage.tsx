@@ -78,20 +78,7 @@ export default function ProjectPage() {
 
             <ResizablePanel defaultSize={56} minSize={30}>
               {viewMode === 'graph' ? (
-                <ResizablePanelGroup
-                  direction="vertical"
-                  className="flex-1 min-h-0 w-full"
-                >
-                  <ResizablePanel defaultSize={70} minSize={30}>
-                    <MainCardsWindow />
-                  </ResizablePanel>
-
-                  <ResizableHandle />
-
-                  <ResizablePanel defaultSize={30} minSize={15}>
-                    <ConsoleWindow />
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                <MainCardsWindow />
               ) : viewMode === 'table' ? (
                 <TableViewWindow activeTable={activeTable} />
               ) : (
