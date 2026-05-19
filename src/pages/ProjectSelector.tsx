@@ -27,15 +27,17 @@ type ProjectSelectorProps = {
 }
 
 function projectErrorMessage(error: unknown, fallback: string) {
-  const responseData = (error as {
-    response?: {
-      data?: {
-        name?: string[]
-        description?: string[]
-        detail?: string
+  const responseData = (
+    error as {
+      response?: {
+        data?: {
+          name?: string[]
+          description?: string[]
+          detail?: string
+        }
       }
     }
-  })?.response?.data
+  )?.response?.data
 
   return (
     responseData?.name?.[0] ||
@@ -50,6 +52,7 @@ export default function ProjectSelector({
 }: ProjectSelectorProps) {
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [selectedProjectName, setSelectedProjectName] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -57,6 +60,13 @@ export default function ProjectSelector({
   const [createError, setCreateError] = useState('')
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectDescription, setNewProjectDescription] = useState('')
+
+  function onSelect(value: string) {
+    setSelectedProjectId(value)
+    setSelectedProjectName(
+      projects.find((project) => String(project.id) == value)!.name
+    )
+  }
 
   useEffect(() => {
     async function loadProjects() {
@@ -69,6 +79,7 @@ export default function ProjectSelector({
 
         if (data.length > 0) {
           setSelectedProjectId(String(data[0].id))
+          setSelectedProjectName(data[0].name)
         }
       } catch (err: unknown) {
         console.error(err)
@@ -86,6 +97,7 @@ export default function ProjectSelector({
 
     setSubmitting(true)
     sessionStorage.setItem('projectId', selectedProjectId)
+    sessionStorage.setItem('projectName', selectedProjectName)
     onProjectSelected()
   }
 
@@ -106,7 +118,9 @@ export default function ProjectSelector({
       })
       setProjects((current) => [project, ...current])
       setSelectedProjectId(String(project.id))
+      setSelectedProjectName(String(project.name))
       sessionStorage.setItem('projectId', String(project.id))
+      sessionStorage.setItem('projectName', project.name)
       onProjectSelected()
     } catch (err: unknown) {
       console.error(err)
@@ -156,14 +170,17 @@ export default function ProjectSelector({
                       <Label htmlFor="project">Project</Label>
                       <Select
                         value={selectedProjectId}
-                        onValueChange={setSelectedProjectId}
+                        onValueChange={onSelect}
                       >
                         <SelectTrigger id="project" className="w-full">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent>
                           {projects.map((project) => (
-                            <SelectItem key={project.id} value={String(project.id)}>
+                            <SelectItem
+                              key={project.id}
+                              value={String(project.id)}
+                            >
                               {project.name}
                             </SelectItem>
                           ))}
@@ -175,13 +192,15 @@ export default function ProjectSelector({
                       <div className="rounded-xl border bg-background px-4 py-3 text-sm">
                         <div className="font-medium">
                           {
-                            projects.find((p) => String(p.id) === selectedProjectId)
-                              ?.name
+                            projects.find(
+                              (p) => String(p.id) === selectedProjectId
+                            )?.name
                           }
                         </div>
                         <div className="mt-1 text-muted-foreground">
-                          {projects.find((p) => String(p.id) === selectedProjectId)
-                            ?.description || 'No description'}
+                          {projects.find(
+                            (p) => String(p.id) === selectedProjectId
+                          )?.description || 'No description'}
                         </div>
                       </div>
                     ) : null}
@@ -220,7 +239,9 @@ export default function ProjectSelector({
                       <Input
                         id="new-project-name"
                         value={newProjectName}
-                        onChange={(event) => setNewProjectName(event.target.value)}
+                        onChange={(event) =>
+                          setNewProjectName(event.target.value)
+                        }
                         placeholder="New project"
                         disabled={creating}
                         required
@@ -228,11 +249,15 @@ export default function ProjectSelector({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="new-project-description">Description</Label>
+                      <Label htmlFor="new-project-description">
+                        Description
+                      </Label>
                       <Textarea
                         id="new-project-description"
                         value={newProjectDescription}
-                        onChange={(event) => setNewProjectDescription(event.target.value)}
+                        onChange={(event) =>
+                          setNewProjectDescription(event.target.value)
+                        }
                         placeholder="Scope, item definition, or notes"
                         disabled={creating}
                         rows={3}
