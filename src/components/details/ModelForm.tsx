@@ -837,10 +837,9 @@ export function ModelForm({ model, setModel = () => {} }: Props) {
               <Combobox
                 items={mitreTechniques}
                 value={selectedTechnique}
-                onValueChange={(val) => setMitreTechnique(val as MitreTechnique | null)}
-                itemToStringLabel={(item) => item ? `${item.id} — ${item.name}` : ''}
-                isItemEqualToValue={(a, b) => a.id === b.id}
-                className="w-full"
+                onValueChange={(val: MitreTechnique | null) => setMitreTechnique(val)}
+                itemToStringLabel={(item: MitreTechnique | null) => item ? `${item.id} — ${item.name}` : ''}
+                isItemEqualToValue={(a: MitreTechnique, b: MitreTechnique) => a.id === b.id}
               >
                 <ComboboxInput
                   showClear={!!selectedTechnique}

@@ -123,7 +123,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
   const [filterBy, setFilterBy] = useState('')
 
   const filterableTypes = useCallback(
-    () => [
+    (): ModelType[] => [
       'technology',
       'component',
       'dataEntity',
@@ -133,10 +133,11 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
       'threatScenario',
       'damageScenario',
       'compromise',
+      'cybersecurityGoal',
     ],
     []
   )
-  const [filterType, setFilterType] = useState([] as string[])
+  const [filterType, setFilterType] = useState([] as ModelType[])
 
   useEffect(() => {
     setFlowNodes((currentNodes) => {
@@ -309,7 +310,7 @@ export function MainCardView({ nodes, edges }: MainCardViewProps) {
                 <ComboboxContent>
                   <ComboboxEmpty>No types selected</ComboboxEmpty>
                   <ComboboxList>
-                    {(item) => (
+                    {(item: ModelType) => (
                       <ComboboxItem key={item} value={item}>
                         {item}
                       </ComboboxItem>

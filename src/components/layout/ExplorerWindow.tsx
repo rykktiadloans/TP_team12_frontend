@@ -591,6 +591,7 @@ function formatModelTypeLabel(type: ModelType) {
     threatScenario: 'Threat Scenario',
     damageScenario: 'Damage Scenario',
     compromise: 'Compromise',
+    cybersecurityGoal: 'Cybersecurity Goal',
   }
 
   return labels[type]
@@ -607,6 +608,7 @@ function getModelsForType(type: ModelType, state: ModelState): Model[] {
     threatScenario: state.threatScenarios as Map<number, Model>,
     damageScenario: state.damageScenarios as Map<number, Model>,
     compromise: state.compromises as Map<number, Model>,
+    cybersecurityGoal: state.cybersecurityGoals as Map<number, Model>,
   }
 
   return [...maps[type].values()]

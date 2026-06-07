@@ -179,6 +179,21 @@ function modelStateToTreeItems(state: ModelState): DefinitionTreeNode[] {
           ),
         }
       }
+      case 'cybersecurityGoals': {
+        const values = [...state[key].values()]
+        return {
+          id: 'cybersecurityGoals',
+          label: 'Cybersecurity Goals',
+          kind: 'main-component',
+          children: values.map(
+            (goal): DefinitionTreeNode => ({
+              id: modelToId('cybersecurityGoal', goal),
+              label: goal.name,
+              kind: 'sub-component',
+            })
+          ),
+        }
+      }
     }
   })
 }
