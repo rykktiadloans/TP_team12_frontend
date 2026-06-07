@@ -18,6 +18,20 @@ export async function login({ backendUrl, username, password }) {
   return res.data
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+export async function register({ backendUrl, username, password, email }) {
+  sessionStorage.setItem('backendUrl', backendUrl)
+
+  const res = await api.post('/register/', {
+    username,
+    password,
+    email,
+  })
+
+  return res.data
+}
+
 export function logout() {
   sessionStorage.removeItem("accessToken")
   sessionStorage.removeItem("refreshToken")

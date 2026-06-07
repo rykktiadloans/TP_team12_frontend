@@ -101,6 +101,19 @@ export default function Header() {
           </DialogContent>
         </Dialog>
       </MenubarMenu>
+      <MenubarMenu>
+        <MenubarTrigger
+          onClick={() => {
+            sessionStorage.removeItem('accessToken')
+            sessionStorage.removeItem('refreshToken')
+            sessionStorage.removeItem('projectId')
+            sessionStorage.removeItem('projectName')
+            window.location.reload()
+          }}
+        >
+          Login
+        </MenubarTrigger>
+      </MenubarMenu>
       <div className="text-center grow">{projectName ?? '<No name>'}</div>
       <div className="hidden">
         <input

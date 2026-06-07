@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-import { login } from '../lib/auth'
+import { login, register } from '../lib/auth'
 
 type LoginProps = {
   onLoginSuccess: () => void
@@ -26,8 +26,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [backendUrl, setBackendUrl] = useState(
     sessionStorage.getItem('backendUrl') || defaultBackendUrl
   )
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -37,19 +39,27 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setLoading(true)
 
     try {
-      await login({
-        backendUrl,
-        username,
-        password,
-      })
+      if (mode === 'register') {
+        await register({
+          backendUrl,
+          username,
+          password,
+          email,
+        })
+      }
+
+      await login({ backendUrl, username, password })
 
       onLoginSuccess()
     } catch (err: any) {
       console.error(err)
       setError(
+        err?.response?.data?.error ||
         err?.response?.data?.detail ||
           err?.message ||
-          'Login failed, please try again'
+          (mode === 'register'
+            ? 'Registration failed, please try again'
+            : 'Login failed, please try again')
       )
     } finally {
       setLoading(false)
@@ -66,7 +76,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 <ShieldCheck className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-2xl">Sign in</CardTitle>
+                <CardTitle className="text-2xl">
+                  {mode === 'register' ? 'Create user' : 'Sign in'}
+                </CardTitle>
               </div>
             </div>
           </CardHeader>
@@ -108,6 +120,23 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 </div>
               </div>
 
+              {mode === 'register' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="optional@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -138,11 +167,28 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Logging in...
+                    {mode === 'register' ? 'Creating user...' : 'Logging in...'}
                   </>
                 ) : (
-                  'Login'
+                  mode === 'register' ? 'Create user and login' : 'Login'
                 )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full rounded-xl"
+                disabled={loading}
+                onClick={() => {
+                  setError('')
+                  setMode((current) =>
+                    current === 'login' ? 'register' : 'login'
+                  )
+                }}
+              >
+                {mode === 'register'
+                  ? 'Back to login'
+                  : 'Create a new user'}
               </Button>
             </form>
           </CardContent>
